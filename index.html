@@ -686,6 +686,9 @@
                 <button onclick="loadAllAvailability()" class="btn btn-outline">
                     <i class="fas fa-calendar-alt"></i> Вся доступность
                 </button>
+                <button onclick="forceCheckTournaments()" class="btn btn-warning">
+                    <i class="fas fa-sync"></i> Проверить турниры
+                </button>
             </div>
 
             <div id="admin-content">
@@ -950,10 +953,15 @@
                 usernameSpan.textContent = currentUser.email;
             }
             
-            // Проверка на админа
-          if (currentUser.email === 'fergery99@gmail.com') {
-    document.getElementById('admin-btn').classList.remove('hidden');
-}
+            // Проверка на админа - ВСТАВЬТЕ ВАШ EMAIL
+            const adminEmails = [
+                'ваш.email@gmail.com',      // Замените на ваш email
+                'admin@example.com'         // Тестовый админ
+            ];
+            
+            if (adminEmails.includes(currentUser.email)) {
+                document.getElementById('admin-btn').classList.remove('hidden');
+            }
             
             userInfo.classList.remove('hidden');
         }
@@ -1355,6 +1363,7 @@
             toggleMultiSelectMode();
         }
 
+        // ============= СОХРАНЕНИЕ ДОСТУПНОСТИ И АВТОТУРНИР =============
         async function saveMultipleRegistrations() {
             if (!currentUser) {
                 showNotification('Сначала войдите в систему', 'error');
@@ -1369,6 +1378,7 @@
             try {
                 const dateArray = Array.from(selectedDates);
                 let successCount = 0;
+                let createdTournaments = 0;
                 
                 for (const dateStr of dateArray) {
                     // Находим день в tournamentDays
@@ -1385,11 +1395,11 @@
                                 status: 'active'
                             });
                         
-                        if (!availError) successCount++;
-                        
-                        // Проверяем, нужно ли создавать турнир
-                        if (day.auto_tournament) {
-                            await checkAndCreateTournament(day);
+                        if (!availError) {
+                            successCount++;
+                            // После добавления доступности проверяем, нужно ли создавать турнир
+                            const tournamentCreated = await checkAndCreateTournamentFromAvailability(day.id);
+                            if (tournamentCreated) createdTournaments++;
                         }
                     } else {
                         // Если дня нет в расписании, просто добавляем доступность без tournament_day_id
@@ -1405,17 +1415,22 @@
                     }
                 }
                 
-                if (successCount > 0) {
-                    showNotification(`Добавлено ${successCount} дат доступности`, 'success');
-                    selectedDates.clear();
-                    toggleMultiSelectMode();
-                    
-                    // Обновляем данные
-                    await Promise.all([
-                        loadMyAvailability()
-                    ]);
-                    updateCalendar();
+                let message = `Добавлено ${successCount} дат доступности`;
+                if (createdTournaments > 0) {
+                    message += `. Создано ${createdTournaments} турниров!`;
                 }
+                
+                showNotification(message, 'success');
+                selectedDates.clear();
+                toggleMultiSelectMode();
+                
+                // Обновляем данные
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadMyAvailability(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
                 
             } catch (error) {
                 console.error('Ошибка сохранения доступности:', error);
@@ -1423,43 +1438,117 @@
             }
         }
 
-        async function checkAndCreateTournament(day) {
-            // Получаем количество доступных игроков на этот день
-            const { data: availability, error } = await supabaseClient
-                .from('availability')
-                .select('user_id')
-                .eq('tournament_day_id', day.id)
-                .eq('status', 'active');
-            
-            if (error || !availability) return;
-            
-            const availablePlayers = availability.length;
-            
-            // Если достаточно игроков для турнира и турнир еще не создан
-            if (availablePlayers >= day.min_participants && !day.is_tournament) {
-                // Создаем турнир
-                const { error: tournamentError } = await supabaseClient
-                    .from('tournaments')
-                    .insert({
-                        tournament_day_id: day.id,
-                        name: `Турнир ${formatDate(new Date(day.date))}`,
-                        format: 'round-robin',
-                        status: 'scheduled',
-                        created_by: currentUser.id
-                    });
+        // Функция для проверки и создания турнира из доступности
+        async function checkAndCreateTournamentFromAvailability(dayId) {
+            try {
+                // Получаем информацию о дне
+                const { data: day, error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', dayId)
+                    .single();
                 
-                if (!tournamentError) {
-                    // Помечаем день как турнир
-                    await supabaseClient
-                        .from('tournament_days')
-                        .update({ 
-                            is_tournament: true,
-                            status: 'confirmed'
-                        })
-                        .eq('id', day.id);
-                    
-                    showNotification(`Турнир создан на ${formatDate(new Date(day.date))}!`, 'success');
+                if (dayError || !day) return false;
+                
+                // Если день уже турнир или не поддерживает автотурнир
+                if (day.is_tournament || !day.auto_tournament || !day.is_active) {
+                    return false;
                 }
+                
+                // Получаем количество доступных игроков
+                const { data: availability, error: availError } = await supabaseClient
+                    .from('availability')
+                    .select('user_id')
+                    .eq('tournament_day_id', dayId)
+                    .eq('status', 'active');
+                
+                if (availError || !availability) return false;
+                
+                const availableCount = availability.length;
+                
+                // Проверяем условия создания турнира
+                if (availableCount >= day.min_participants) {
+                    // Проверяем, есть ли уже турнир
+                    const { data: existingTournament } = await supabaseClient
+                        .from('tournaments')
+                        .select('id')
+                        .eq('tournament_day_id', dayId)
+                        .single();
+                    
+                    if (existingTournament) return false; // Турнир уже существует
+                    
+                    // Создаем турнир
+                    const { error: tournamentError } = await supabaseClient
+                        .from('tournaments')
+                        .insert({
+                            tournament_day_id: dayId,
+                            name: `Турнир ${formatDate(new Date(day.date))}`,
+                            format: 'round-robin',
+                            status: 'scheduled'
+                        });
+                    
+                    if (!tournamentError) {
+                        // Помечаем день как турнир
+                        await supabaseClient
+                            .from('tournament_days')
+                            .update({ 
+                                is_tournament: true,
+                                status: 'confirmed',
+                                tournament_name: `Турнир ${formatDate(new Date(day.date))}`
+                            })
+                            .eq('id', dayId);
+                        
+                        console.log(`Турнир создан автоматически для дня ${day.date} (${availableCount} участников)`);
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка создания турнира из доступности:', error);
+            }
+            return false;
+        }
+
+        // Функция для принудительной проверки всех дней на создание турниров
+        async function forceCheckTournaments() {
+            showNotification('Проверяем дни на создание турниров...', 'info');
+            
+            try {
+                // Получаем все активные дни с автотурниром, которые еще не турниры
+                const { data: days, error } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('is_active', true)
+                    .eq('auto_tournament', true)
+                    .eq('is_tournament', false)
+                    .gte('date', new Date().toISOString().split('T')[0]);
+                
+                if (error || !days || days.length === 0) {
+                    showNotification('Нет дней для проверки', 'info');
+                    return;
+                }
+                
+                let tournamentsCreated = 0;
+                
+                for (const day of days) {
+                    const created = await checkAndCreateTournamentFromAvailability(day.id);
+                    if (created) tournamentsCreated++;
+                }
+                
+                if (tournamentsCreated > 0) {
+                    showNotification(`Создано ${tournamentsCreated} турниров!`, 'success');
+                    // Обновляем данные
+                    await Promise.all([
+                        loadTournamentDays(),
+                        loadUpcomingTournaments()
+                    ]);
+                    updateCalendar();
+                } else {
+                    showNotification('Новых турниров для создания не найдено', 'info');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка принудительной проверки:', error);
+                showNotification('Ошибка проверки', 'error');
             }
         }
 
@@ -1563,8 +1652,9 @@
                                 </div>
                             </div>
                             ${day ? `
-                                <p>Всего свободных: ${day.current_participants || 0}/${day.max_participants || 8}</p>
+                                <p>Всего свободных: ${await getAvailableCount(day.id)}/${day.max_participants || 8}</p>
                                 ${day.min_participants ? `<p>Для турнира нужно: ${day.min_participants}</p>` : ''}
+                                ${day.is_tournament ? '<p><strong>Турнир создан!</strong></p>' : ''}
                             ` : '<p>День еще не создан администратором</p>'}
                             <button onclick="removeAvailability('${avail.id}')" class="btn btn-danger btn-sm">
                                 <i class="fas fa-times"></i> Удалить
@@ -1573,6 +1663,16 @@
                     `;
                 }).join('');
             });
+        }
+
+        async function getAvailableCount(dayId) {
+            const { data: availability } = await supabaseClient
+                .from('availability')
+                .select('id')
+                .eq('tournament_day_id', dayId)
+                .eq('status', 'active');
+            
+            return availability ? availability.length : 0;
         }
 
         async function removeAvailability(availabilityId) {
@@ -1842,32 +1942,12 @@
                     .eq('user_id', currentUser.id)
                     .eq('tournament_day_id', selectedDay.id);
                 
-                // Проверяем, нужно ли создавать турнир
+                // Проверяем, нужно ли создавать турнир из записей
                 if (selectedDay.auto_tournament && 
                     newCount >= selectedDay.min_participants && 
                     !selectedDay.is_tournament) {
                     
-                    // Создаем турнир
-                    const { error: tournamentError } = await supabaseClient
-                        .from('tournaments')
-                        .insert({
-                            tournament_day_id: selectedDay.id,
-                            name: `Турнир ${formatDate(new Date(selectedDay.date))}`,
-                            format: 'round-robin',
-                            status: 'scheduled',
-                            created_by: currentUser.id
-                        });
-                    
-                    if (!tournamentError) {
-                        // Помечаем день как турнир
-                        await supabaseClient
-                            .from('tournament_days')
-                            .update({ 
-                                is_tournament: true,
-                                status: 'confirmed'
-                            })
-                            .eq('id', selectedDay.id);
-                    }
+                    await checkAndCreateTournamentFromRegistrations(selectedDay.id, newCount);
                 }
                 
                 showNotification('Вы успешно записались!', 'success');
@@ -1885,6 +1965,57 @@
             } catch (error) {
                 console.error('Ошибка записи:', error);
                 showNotification('Ошибка при записи', 'error');
+            }
+        }
+
+        async function checkAndCreateTournamentFromRegistrations(dayId, participantCount) {
+            try {
+                // Получаем информацию о дне
+                const { data: day } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', dayId)
+                    .single();
+                
+                if (!day) return;
+                
+                // Получаем количество подтвержденных участников
+                const { data: registrations } = await supabaseClient
+                    .from('registrations')
+                    .select('id')
+                    .eq('tournament_day_id', dayId)
+                    .eq('status', 'confirmed');
+                
+                const confirmedCount = registrations ? registrations.length : 0;
+                
+                // Проверяем условия создания турнира
+                if (confirmedCount >= day.min_participants && !day.is_tournament) {
+                    // Создаем турнир
+                    const { error: tournamentError } = await supabaseClient
+                        .from('tournaments')
+                        .insert({
+                            tournament_day_id: dayId,
+                            name: `Турнир ${formatDate(new Date(day.date))}`,
+                            format: 'round-robin',
+                            status: 'scheduled'
+                        });
+                    
+                    if (!tournamentError) {
+                        // Помечаем день как турнир
+                        await supabaseClient
+                            .from('tournament_days')
+                            .update({ 
+                                is_tournament: true,
+                                status: 'confirmed',
+                                tournament_name: `Турнир ${formatDate(new Date(day.date))}`
+                            })
+                            .eq('id', dayId);
+                        
+                        showNotification(`Турнир создан! На ${formatDate(new Date(day.date))} записалось ${confirmedCount} игроков`, 'success');
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка создания турнира из записей:', error);
             }
         }
 
@@ -1928,7 +2059,8 @@
                         .from('tournament_days')
                         .update({ 
                             is_tournament: false,
-                            status: 'open'
+                            status: 'open',
+                            tournament_name: null
                         })
                         .eq('id', selectedDay.id);
                     
@@ -1997,6 +2129,24 @@
                         .eq('id', day.id);
                     
                     if (dayError) throw dayError;
+                    
+                    // Если участников стало меньше минимального, убираем турнир
+                    if (newCount < day.min_participants && day.is_tournament) {
+                        await supabaseClient
+                            .from('tournament_days')
+                            .update({ 
+                                is_tournament: false,
+                                status: 'open',
+                                tournament_name: null
+                            })
+                            .eq('id', day.id);
+                        
+                        // Удаляем турнир
+                        await supabaseClient
+                            .from('tournaments')
+                            .delete()
+                            .eq('tournament_day_id', day.id);
+                    }
                 }
                 
                 showNotification('Запись отменена', 'success');
@@ -2025,6 +2175,130 @@
         function hideAdminPanel() {
             document.getElementById('main-content').classList.remove('hidden');
             document.getElementById('admin-panel').classList.add('hidden');
+        }
+
+        async function handleCreateDay(e) {
+            e.preventDefault();
+            
+            const date = document.getElementById('day-date').value;
+            const maxParticipants = parseInt(document.getElementById('max-participants').value);
+            const minParticipants = parseInt(document.getElementById('min-participants').value);
+            const autoTournament = document.getElementById('auto-tournament').checked;
+            const adminNotes = document.getElementById('admin-notes').value;
+            
+            try {
+                // Проверяем, существует ли уже день
+                const { data: existing } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('date', date)
+                    .single();
+                
+                if (existing) {
+                    showNotification('День с этой датой уже существует', 'error');
+                    return;
+                }
+                
+                // Создаем объект для вставки
+                const dayData = {
+                    date,
+                    max_participants: maxParticipants,
+                    min_participants: minParticipants,
+                    auto_tournament: autoTournament,
+                    admin_notes: adminNotes,
+                    is_active: true,
+                    status: 'open',
+                    current_participants: 0
+                };
+                
+                // Добавляем created_by только если пользователь авторизован
+                if (currentUser) {
+                    dayData.created_by = currentUser.id;
+                }
+                
+                const { error } = await supabaseClient
+                    .from('tournament_days')
+                    .insert(dayData);
+                
+                if (error) {
+                    console.error('Ошибка Supabase:', error);
+                    throw error;
+                }
+                
+                showNotification('День успешно создан', 'success');
+                hideModal('create-day-modal');
+                document.getElementById('create-day-form').reset();
+                
+                await loadTournamentDays();
+                updateCalendar();
+                
+                if (document.getElementById('admin-panel').classList.contains('hidden')) {
+                    loadAdminData();
+                }
+                
+            } catch (error) {
+                console.error('Ошибка создания дня:', error);
+                showNotification('Ошибка при создании дня. Проверьте консоль.', 'error');
+            }
+        }
+
+        async function handleCreateTournament(e) {
+            e.preventDefault();
+            
+            const dayId = document.getElementById('tournament-date').value;
+            const name = document.getElementById('tournament-name').value;
+            const format = document.getElementById('tournament-format').value;
+            const startTime = document.getElementById('tournament-start').value;
+            const description = document.getElementById('tournament-description').value;
+            
+            if (!dayId) {
+                showNotification('Выберите дату', 'error');
+                return;
+            }
+            
+            try {
+                // Обновляем день как турнир
+                const { error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .update({
+                        is_tournament: true,
+                        status: 'confirmed',
+                        tournament_name: name
+                    })
+                    .eq('id', dayId);
+                
+                if (dayError) throw dayError;
+                
+                // Создаем турнир
+                const { error: tournamentError } = await supabaseClient
+                    .from('tournaments')
+                    .insert({
+                        tournament_day_id: dayId,
+                        name,
+                        format,
+                        start_time: startTime,
+                        description,
+                        status: 'scheduled',
+                        created_by: currentUser.id
+                    });
+                
+                if (tournamentError) throw tournamentError;
+                
+                showNotification('Турнир успешно создан', 'success');
+                hideModal('create-tournament-modal');
+                document.getElementById('create-tournament-form').reset();
+                
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Ошибка создания турнира:', error);
+                showNotification('Ошибка при создании турнира', 'error');
+            }
         }
 
         async function loadAdminData() {
@@ -2066,6 +2340,9 @@
                                     </div>
                                     
                                     <p>Участников: ${day.current_participants}/${day.max_participants}</p>
+                                    <p>Доступных игроков: <span id="available-count-${day.id}">Загрузка...</span></p>
+                                    
+                                    ${day.auto_tournament ? `<p><i class="fas fa-robot"></i> Автотурнир при ${day.min_participants}+</p>` : ''}
                                     
                                     ${day.admin_notes ? `<p><small>${day.admin_notes}</small></p>` : ''}
                                     
@@ -2080,121 +2357,32 @@
                     </div>
                 `;
                 
+                // Загружаем количество доступных игроков для каждого дня
+                days.forEach(day => {
+                    loadAvailableCountForAdmin(day.id);
+                });
+                
             } catch (error) {
                 console.error('Ошибка загрузки админ-данных:', error);
                 container.innerHTML = '<div class="notification error">Ошибка загрузки данных</div>';
             }
         }
 
-        async function handleCreateDay(e) {
-            e.preventDefault();
+        async function loadAvailableCountForAdmin(dayId) {
+            const { data: availability } = await supabaseClient
+                .from('availability')
+                .select('id')
+                .eq('tournament_day_id', dayId)
+                .eq('status', 'active');
             
-            const date = document.getElementById('day-date').value;
-            const maxParticipants = parseInt(document.getElementById('max-participants').value);
-            const minParticipants = parseInt(document.getElementById('min-participants').value);
-            const autoTournament = document.getElementById('auto-tournament').checked;
-            const adminNotes = document.getElementById('admin-notes').value;
-            
-            try {
-                // Проверяем, существует ли уже день
-                const { data: existing } = await supabaseClient
-                    .from('tournament_days')
-                    .select('*')
-                    .eq('date', date)
-                    .single();
-                
-                if (existing) {
-                    showNotification('День с этой датой уже существует', 'error');
-                    return;
+            const count = availability ? availability.length : 0;
+            const element = document.getElementById(`available-count-${dayId}`);
+            if (element) {
+                element.textContent = count;
+                if (count >= 3) {
+                    element.style.color = 'var(--success-color)';
+                    element.style.fontWeight = 'bold';
                 }
-                
-                const { error } = await supabaseClient
-                    .from('tournament_days')
-                    .insert({
-                        date,
-                        max_participants: maxParticipants,
-                        min_participants: minParticipants,
-                        auto_tournament: autoTournament,
-                        admin_notes: adminNotes,
-                        is_active: true,
-                        status: 'open',
-                        created_by: currentUser.id
-                    });
-                
-                if (error) throw error;
-                
-                showNotification('День успешно создан', 'success');
-                hideModal('create-day-modal');
-                document.getElementById('create-day-form').reset();
-                
-                await loadTournamentDays();
-                updateCalendar();
-                
-                if (document.getElementById('admin-panel').classList.contains('hidden')) {
-                    loadAdminData();
-                }
-                
-            } catch (error) {
-                console.error('Ошибка создания дня:', error);
-                showNotification('Ошибка при создании дня', 'error');
-            }
-        }
-
-        async function handleCreateTournament(e) {
-            e.preventDefault();
-            
-            const dayId = document.getElementById('tournament-date').value;
-            const name = document.getElementById('tournament-name').value;
-            const format = document.getElementById('tournament-format').value;
-            const startTime = document.getElementById('tournament-start').value;
-            const description = document.getElementById('tournament-description').value;
-            
-            if (!dayId) {
-                showNotification('Выберите дату', 'error');
-                return;
-            }
-            
-            try {
-                // Обновляем день как турнир
-                const { error: dayError } = await supabaseClient
-                    .from('tournament_days')
-                    .update({
-                        is_tournament: true,
-                        status: 'confirmed'
-                    })
-                    .eq('id', dayId);
-                
-                if (dayError) throw dayError;
-                
-                // Создаем турнир
-                const { error: tournamentError } = await supabaseClient
-                    .from('tournaments')
-                    .insert({
-                        tournament_day_id: dayId,
-                        name,
-                        format,
-                        start_time: startTime,
-                        description,
-                        status: 'scheduled',
-                        created_by: currentUser.id
-                    });
-                
-                if (tournamentError) throw tournamentError;
-                
-                showNotification('Турнир успешно создан', 'success');
-                hideModal('create-tournament-modal');
-                document.getElementById('create-tournament-form').reset();
-                
-                await Promise.all([
-                    loadTournamentDays(),
-                    loadUpcomingTournaments()
-                ]);
-                updateCalendar();
-                loadAdminData();
-                
-            } catch (error) {
-                console.error('Ошибка создания турнира:', error);
-                showNotification('Ошибка при создании турнира', 'error');
             }
         }
 
@@ -2271,21 +2459,39 @@
             if (!data || data.length === 0) {
                 container.innerHTML = '<div class="empty-state">Нет данных о доступности</div>';
             } else {
-                // Группируем по дате
-                const groupedByDate = {};
+                // Группируем по дате и tournament_day_id
+                const groupedByDay = {};
                 data.forEach(item => {
-                    const dateStr = item.date;
-                    if (!groupedByDate[dateStr]) {
-                        groupedByDate[dateStr] = {
-                            date: dateStr,
+                    const key = item.tournament_day_id || `no-day-${item.date}`;
+                    if (!groupedByDay[key]) {
+                        groupedByDay[key] = {
+                            date: item.date,
+                            dayId: item.tournament_day_id,
                             players: []
                         };
                     }
-                    groupedByDate[dateStr].players.push(item.profiles);
+                    groupedByDay[key].players.push(item.profiles);
                 });
                 
-                container.innerHTML = Object.values(groupedByDate).map(group => {
+                // Получаем информацию о днях
+                const dayPromises = Object.values(groupedByDay).map(async (group) => {
+                    let dayInfo = null;
+                    if (group.dayId) {
+                        const { data: day } = await supabaseClient
+                            .from('tournament_days')
+                            .select('*')
+                            .eq('id', group.dayId)
+                            .single();
+                        dayInfo = day;
+                    }
+                    return { ...group, dayInfo };
+                });
+                
+                const groupsWithDays = await Promise.all(dayPromises);
+                
+                container.innerHTML = groupsWithDays.map(group => {
                     const date = new Date(group.date);
+                    const day = group.dayInfo;
                     
                     return `
                         <div class="registration-card">
@@ -2293,6 +2499,12 @@
                                 <div class="card-date">${formatDate(date)}</div>
                                 <div class="card-status">${group.players.length} игроков</div>
                             </div>
+                            ${day ? `
+                                <p><strong>День игры:</strong> ${day.tournament_name || 'Обычный день'}</p>
+                                <p>Для турнира нужно: ${day.min_participants || 3} из ${day.max_participants || 8}</p>
+                                <p>Автотурнир: ${day.auto_tournament ? 'Включен' : 'Выключен'}</p>
+                                <p>Статус: ${day.is_tournament ? 'Турнир создан!' : 'Ожидание игроков'}</p>
+                            ` : '<p><em>День еще не создан администратором</em></p>'}
                             <div class="participants-list">
                                 <p><small>Свободные игроки:</small></p>
                                 ${group.players.map(player => `
@@ -2301,12 +2513,88 @@
                                     </div>
                                 `).join('')}
                             </div>
+                            ${day && !day.is_tournament && group.players.length >= (day.min_participants || 3) ? 
+                                `<button onclick="forceCreateTournament('${day.id}')" class="btn btn-success btn-sm">
+                                    <i class="fas fa-trophy"></i> Создать турнир вручную
+                                </button>` : ''}
                         </div>
                     `;
                 }).join('');
             }
             
             showModal('all-availability-modal');
+        }
+
+        async function forceCreateTournament(dayId) {
+            if (!confirm('Создать турнир вручную?')) return;
+            
+            try {
+                // Получаем информацию о дне
+                const { data: day, error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', dayId)
+                    .single();
+                
+                if (dayError || !day) {
+                    showNotification('День не найден', 'error');
+                    return;
+                }
+                
+                if (day.is_tournament) {
+                    showNotification('Турнир уже создан', 'error');
+                    return;
+                }
+                
+                // Получаем количество доступных игроков
+                const { data: availability } = await supabaseClient
+                    .from('availability')
+                    .select('user_id')
+                    .eq('tournament_day_id', dayId)
+                    .eq('status', 'active');
+                
+                const availableCount = availability ? availability.length : 0;
+                
+                // Создаем турнир
+                const { error: tournamentError } = await supabaseClient
+                    .from('tournaments')
+                    .insert({
+                        tournament_day_id: dayId,
+                        name: `Турнир ${formatDate(new Date(day.date))}`,
+                        format: 'round-robin',
+                        status: 'scheduled'
+                    });
+                
+                if (tournamentError) throw tournamentError;
+                
+                // Помечаем день как турнир
+                await supabaseClient
+                    .from('tournament_days')
+                    .update({ 
+                        is_tournament: true,
+                        status: 'confirmed',
+                        tournament_name: `Турнир ${formatDate(new Date(day.date))}`
+                    })
+                    .eq('id', dayId);
+                
+                showNotification(`Турнир создан вручную! На ${formatDate(new Date(day.date))} свободны ${availableCount} игроков`, 'success');
+                
+                // Обновляем данные
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadUpcomingTournaments()
+                ]);
+                
+                // Перезагружаем админ данные
+                loadAdminData();
+                
+                // Закрываем модалку если открыта
+                hideModal('all-availability-modal');
+                
+            } catch (error) {
+                console.error('Ошибка создания турнира вручную:', error);
+                showNotification('Ошибка при создании турнира', 'error');
+            }
         }
 
         async function deleteDay(dayId) {
@@ -2406,6 +2694,8 @@
         window.saveMultipleRegistrations = saveMultipleRegistrations;
         window.cancelMultiSelect = cancelMultiSelect;
         window.removeAvailability = removeAvailability;
+        window.forceCheckTournaments = forceCheckTournaments;
+        window.forceCreateTournament = forceCreateTournament;
     </script>
 </body>
 </html>
