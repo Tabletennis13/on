@@ -389,84 +389,6 @@
         let allPlayers = {};
         let tournaments = {};
 
-        // SQL для создания таблиц (выполните в Supabase SQL редакторе)
-        const createTablesSQL = `
-            -- Таблица пользователей
-            CREATE TABLE IF NOT EXISTS users (
-                id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                is_admin BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-
-            -- Таблица выбранных дат
-            CREATE TABLE IF NOT EXISTS user_dates (
-                id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-                date DATE NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(user_id, date)
-            );
-
-            -- Таблица турниров
-            CREATE TABLE IF NOT EXISTS tournaments (
-                id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                date DATE NOT NULL UNIQUE,
-                name TEXT NOT NULL,
-                type TEXT NOT NULL CHECK (type IN ('tournament', 'rating')),
-                status TEXT DEFAULT 'active',
-                created_by UUID REFERENCES users(id),
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-
-            -- Вставка админ пользователя
-            INSERT INTO users (username, password_hash, is_admin) 
-            VALUES ('Admin', crypt('13311331', gen_salt('bf')), true)
-            ON CONFLICT (username) DO NOTHING;
-
-            -- Включение RLS
-            ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-            ALTER TABLE user_dates ENABLE ROW LEVEL SECURITY;
-            ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
-
-            -- Политики для users
-            CREATE POLICY "Anyone can create users" ON users
-                FOR INSERT WITH CHECK (true);
-
-            CREATE POLICY "Users can read their own data" ON users
-                FOR SELECT USING (auth.uid() = id);
-
-            -- Политики для user_dates
-            CREATE POLICY "Anyone can read dates" ON user_dates
-                FOR SELECT USING (true);
-
-            CREATE POLICY "Users can insert their dates" ON user_dates
-                FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-            CREATE POLICY "Users can delete their dates" ON user_dates
-                FOR DELETE USING (auth.uid() = user_id);
-
-            -- Политики для tournaments
-            CREATE POLICY "Anyone can read tournaments" ON tournaments
-                FOR SELECT USING (true);
-
-            CREATE POLICY "Admins can insert tournaments" ON tournaments
-                FOR INSERT WITH CHECK (
-                    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_admin = true)
-                );
-
-            CREATE POLICY "Admins can update tournaments" ON tournaments
-                FOR UPDATE USING (
-                    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_admin = true)
-                );
-
-            CREATE POLICY "Admins can delete tournaments" ON tournaments
-                FOR DELETE USING (
-                    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_admin = true)
-                );
-        `;
-
         // Функция показа сообщения
         function showMessage(message, type = 'success') {
             const msg = document.getElementById('statusMessage');
@@ -488,7 +410,7 @@
             }
 
             const { data: user, error } = await supabase
-                .from('users')
+                .from('pingpong_users')
                 .select('*')
                 .eq('username', username)
                 .single();
@@ -527,7 +449,7 @@
 
             // В реальном приложении хешируйте пароль!
             const { data, error } = await supabase
-                .from('users')
+                .from('pingpong_users')
                 .insert([{
                     username: username,
                     password_hash: password // В продакшене используйте bcrypt
@@ -562,17 +484,19 @@
 
         // Загрузка данных
         async function loadData() {
-            await loadPlayerDates();
-            await loadTournaments();
-            updateCalendar();
+            if (currentUser) {
+                await loadPlayerDates();
+                await loadTournaments();
+                updateCalendar();
+            }
         }
 
         async function loadPlayerDates() {
             const { data, error } = await supabase
-                .from('user_dates')
+                .from('pingpong_user_dates')
                 .select(`
                     date,
-                    user:users(username)
+                    user:pingpong_users(username)
                 `);
 
             if (!error) {
@@ -584,12 +508,24 @@
                     }
                     allPlayers[dateStr].push(item.user.username);
                 });
+                
+                // Загружаем даты текущего пользователя
+                if (currentUser) {
+                    const { data: userDates } = await supabase
+                        .from('pingpong_user_dates')
+                        .select('date')
+                        .eq('user_id', currentUser.id);
+                    
+                    if (userDates) {
+                        selectedDates = new Set(userDates.map(d => d.date));
+                    }
+                }
             }
         }
 
         async function loadTournaments() {
             const { data, error } = await supabase
-                .from('tournaments')
+                .from('pingpong_tournaments')
                 .select('*')
                 .order('date', { ascending: true });
 
@@ -637,32 +573,40 @@
 
         async function selectDate(date) {
             const { error } = await supabase
-                .from('user_dates')
+                .from('pingpong_user_dates')
                 .insert([{
                     user_id: currentUser.id,
                     date: date
                 }]);
 
-            if (!error) {
-                // Проверяем, нужно ли создать турнир
-                const playersOnDate = allPlayers[date] || [];
-                if (playersOnDate.length + 1 >= 3) {
+            if (error) {
+                showMessage('Ошибка при выборе даты: ' + error.message, 'error');
+                return;
+            }
+
+            // Проверяем, нужно ли создать турнир
+            const playersOnDate = allPlayers[date] || [];
+            if (playersOnDate.length + 1 >= 3) {
+                // Проверяем, есть ли уже турнир
+                if (!tournaments[date]) {
                     // Автоматическое создание турнира
                     await createAutoTournament(date);
                 }
-                await loadPlayerDates();
             }
+            await loadPlayerDates();
+            updateCalendar();
         }
 
         async function deselectDate(date) {
             const { error } = await supabase
-                .from('user_dates')
+                .from('pingpong_user_dates')
                 .delete()
                 .eq('user_id', currentUser.id)
                 .eq('date', date);
 
             if (!error) {
                 await loadPlayerDates();
+                updateCalendar();
             }
         }
 
@@ -670,7 +614,7 @@
             if (tournaments[date]) return;
 
             const { data, error } = await supabase
-                .from('tournaments')
+                .from('pingpong_tournaments')
                 .insert([{
                     date: date,
                     name: `Авто-турнир ${date}`,
@@ -689,9 +633,19 @@
 
         function updateCalendar() {
             setTimeout(() => {
+                const today = new Date().toISOString().split('T')[0];
+                
                 document.querySelectorAll('.flatpickr-day').forEach(day => {
+                    if (!day.dateObj) return;
+                    
                     const date = day.dateObj.toISOString().split('T')[0];
                     day.classList.remove('selected', 'tournament-day', 'day-with-players');
+                    
+                    // Убираем выбор с прошедших дат
+                    if (date < today) {
+                        day.classList.add('disabled');
+                        return;
+                    }
                     
                     // Проверяем выбор пользователя
                     if (selectedDates.has(date)) {
@@ -738,7 +692,7 @@
             }
 
             const { data, error } = await supabase
-                .from('tournaments')
+                .from('pingpong_tournaments')
                 .insert([{
                     date: date,
                     name: name,
@@ -768,7 +722,7 @@
             if (!newName) return;
 
             const { error } = await supabase
-                .from('tournaments')
+                .from('pingpong_tournaments')
                 .update({ name: newName })
                 .eq('id', id);
 
@@ -783,7 +737,7 @@
             if (!confirm('Удалить турнир?')) return;
 
             const { error } = await supabase
-                .from('tournaments')
+                .from('pingpong_tournaments')
                 .delete()
                 .eq('id', id);
 
@@ -807,6 +761,7 @@
                     <div class="tournament-info">
                         <h4>${t.name}</h4>
                         <p>${t.date} (${t.type === 'tournament' ? 'Турнир' : 'Рейтинг'})</p>
+                        <small>Участников: ${allPlayers[t.date] ? allPlayers[t.date].length : 0}</small>
                     </div>
                     ${currentUser && currentUser.is_admin ? `
                         <div class="tournament-actions">
@@ -854,8 +809,13 @@
             initCalendar();
             updateUI();
             
-            // Загружаем данные
-            loadData();
+            // Загружаем данные если есть сохраненный пользователь
+            const savedUser = localStorage.getItem('pingpong_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                updateUI();
+                loadData();
+            }
         });
     </script>
 </body>
