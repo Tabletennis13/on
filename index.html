@@ -573,35 +573,35 @@
             }
 
             // Функции авторизации
-            async function login() {
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
+async function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
 
-                if (!username || !password) {
-                    showMessage('Введите логин и пароль', 'error');
-                    return;
-                }
+    if (!username || !password) {
+        showMessage('Введите логин и пароль', 'error');
+        return;
+    }
 
-                const { data: user, error } = await sb
-                    .from('pingpong_users')
-                    .select('*')
-                    .eq('username', username)
-                    .single();
+    // Ищем пользователя по логину
+    const { data: user, error } = await supabaseClient
+        .from('pingpong_users')
+        .select('*')
+        .eq('username', username)
+        .single();
 
-                if (error || !user) {
-                    showMessage('Пользователь не найден', 'error');
-                    return;
-                }
+    if (error || !user) {
+        showMessage('Пользователь не найден', 'error');
+        return;
+    }
 
-                // Проверка пароля
-                if (password === '13311331' && username === 'Admin') {
-                    setCurrentUser(user);
-                } else if (password.length >= 4) {
-                    setCurrentUser(user);
-                } else {
-                    showMessage('Неверный пароль', 'error');
-                }
-            }
+    // ПРОВЕРЯЕМ ПАРОЛЬ (теперь без crypt!)
+    if (user.password_hash === password) {
+        setCurrentUser(user);
+        showMessage(`Добро пожаловать, ${user.username}!`);
+    } else {
+        showMessage('Неверный пароль', 'error');
+    }
+}
 
             async function register() {
                 const username = document.getElementById('username').value;
