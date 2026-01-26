@@ -1171,14 +1171,14 @@
             
             for (let day = 1; day <= totalDays; day++) {
                 const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-                const dateString = dayDate.toISOString().split('T')[0];
+                const dateString = formatDateForStorage(dayDate);
                 
                 const dayCell = document.createElement('div');
                 dayCell.className = 'day-cell';
                 dayCell.dataset.date = dateString;
                 
                 // Проверяем, сегодня ли это
-                if (dayDate.getTime() === today.getTime()) {
+                if (isSameDate(dayDate, today)) {
                     dayCell.classList.add('today');
                 }
                 
@@ -1251,10 +1251,11 @@
                 if (!dayCell.classList.contains('past')) {
                     dayCell.style.cursor = 'pointer';
                     
-                    // Обработчик клика
+                    // Обработчик клика - исправленная версия
                     dayCell.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        handleDayCellClick(dateString, tournamentDay);
+                        const clickedDateStr = dayCell.dataset.date;
+                        handleDayCellClick(clickedDateStr, tournamentDay);
                     });
                 } else {
                     dayCell.style.cursor = 'default';
@@ -1280,7 +1281,7 @@
             
             if (selectedDates.has(dateString)) {
                 selectedDates.delete(dateString);
-                showNotification(`Дата ${formatShortDate(new Date(dateString))} удалена из выбора`, 'info');
+                showNotification(`Дата ${formatShortDate(parseDate(dateString))} удалена из выбора`, 'info');
             } else {
                 // Проверяем, можно ли записаться на этот день
                 if (tournamentDay) {
@@ -1295,7 +1296,7 @@
                 }
                 
                 selectedDates.add(dateString);
-                showNotification(`Дата ${formatShortDate(new Date(dateString))} добавлена`, 'success');
+                showNotification(`Дата ${formatShortDate(parseDate(dateString))} добавлена`, 'success');
             }
             
             updateSelectedDatesList();
@@ -1342,7 +1343,7 @@
             
             const sortedDates = Array.from(selectedDates).sort();
             container.innerHTML = sortedDates.map(dateStr => {
-                const date = new Date(dateStr);
+                const date = parseDate(dateStr);
                 return `
                     <div class="date-tag">
                         ${formatShortDate(date)}
@@ -1587,7 +1588,7 @@
                 container.innerHTML = results.map(({ reg, day }) => {
                     if (!day) return '';
                     
-                    const date = new Date(day.date);
+                    const date = parseDate(day.date);
                     const isTournament = day.is_tournament;
                     
                     return `
@@ -1641,7 +1642,7 @@
             
             Promise.all(availabilityPromises).then(results => {
                 container.innerHTML = results.map(({ avail, day }) => {
-                    const date = new Date(avail.date);
+                    const date = parseDate(avail.date);
                     
                     return `
                         <div class="availability-card">
@@ -1713,7 +1714,7 @@
             container.innerHTML = tournaments.map(day => {
                 if (!day.is_active) return '';
                 
-                const date = new Date(day.date);
+                const date = parseDate(day.date);
                 const isTournament = day.is_tournament;
                 const hasTournament = day.tournaments && day.tournaments.length > 0;
                 
@@ -1829,7 +1830,7 @@
             const isRegistered = participants?.some(p => p.user_id === currentUser.id);
             
             // Обновляем модальное окно
-            document.getElementById('day-title').textContent = formatDate(new Date(dateString));
+            document.getElementById('day-title').textContent = formatDate(parseDate(dateString));
             
             let detailsHtml = `
                 <div class="form-group">
@@ -1995,7 +1996,7 @@
                         .from('tournaments')
                         .insert({
                             tournament_day_id: dayId,
-                            name: `Турнир ${formatDate(new Date(day.date))}`,
+                            name: `Турнир ${formatDate(parseDate(day.date))}`,
                             format: 'round-robin',
                             status: 'scheduled'
                         });
@@ -2007,11 +2008,11 @@
                             .update({ 
                                 is_tournament: true,
                                 status: 'confirmed',
-                                tournament_name: `Турнир ${formatDate(new Date(day.date))}`
+                                tournament_name: `Турнир ${formatDate(parseDate(day.date))}`
                             })
                             .eq('id', dayId);
                         
-                        showNotification(`Турнир создан! На ${formatDate(new Date(day.date))} записалось ${confirmedCount} игроков`, 'success');
+                        showNotification(`Турнир создан! На ${formatDate(parseDate(day.date))} записалось ${confirmedCount} игроков`, 'success');
                     }
                 }
             } catch (error) {
@@ -2327,7 +2328,7 @@
                     <h3>Все игровые дни</h3>
                     <div class="admin-days-list">
                         ${days.map(day => {
-                            const date = new Date(day.date);
+                            const date = parseDate(day.date);
                             const isPast = date < new Date();
                             
                             return `
@@ -2419,7 +2420,7 @@
                 
                 Promise.all(registrationPromises).then(results => {
                     container.innerHTML = results.map(({ reg, day }) => {
-                        const date = day ? new Date(day.date) : new Date(reg.registration_date);
+                        const date = day ? parseDate(day.date) : new Date(reg.registration_date);
                         
                         return `
                             <div class="registration-card">
@@ -2490,7 +2491,7 @@
                 const groupsWithDays = await Promise.all(dayPromises);
                 
                 container.innerHTML = groupsWithDays.map(group => {
-                    const date = new Date(group.date);
+                    const date = parseDate(group.date);
                     const day = group.dayInfo;
                     
                     return `
@@ -2560,7 +2561,7 @@
                     .from('tournaments')
                     .insert({
                         tournament_day_id: dayId,
-                        name: `Турнир ${formatDate(new Date(day.date))}`,
+                        name: `Турнир ${formatDate(parseDate(day.date))}`,
                         format: 'round-robin',
                         status: 'scheduled'
                     });
@@ -2573,11 +2574,11 @@
                     .update({ 
                         is_tournament: true,
                         status: 'confirmed',
-                        tournament_name: `Турнир ${formatDate(new Date(day.date))}`
+                        tournament_name: `Турнир ${formatDate(parseDate(day.date))}`
                     })
                     .eq('id', dayId);
                 
-                showNotification(`Турнир создан вручную! На ${formatDate(new Date(day.date))} свободны ${availableCount} игроков`, 'success');
+                showNotification(`Турнир создан вручную! На ${formatDate(parseDate(day.date))} свободны ${availableCount} игроков`, 'success');
                 
                 // Обновляем данные
                 await Promise.all([
@@ -2651,6 +2652,7 @@
         }
 
         function formatDate(date) {
+            if (!date) return 'Неизвестная дата';
             const options = { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -2661,11 +2663,32 @@
         }
 
         function formatShortDate(date) {
+            if (!date) return 'Неизвестная дата';
             const options = { 
                 day: 'numeric',
                 month: 'short'
             };
             return date.toLocaleDateString('ru-RU', options);
+        }
+
+        function formatDateForStorage(date) {
+            // Формат YYYY-MM-DD для хранения
+            return date.toISOString().split('T')[0];
+        }
+
+        function parseDate(dateString) {
+            // Парсим строку формата YYYY-MM-DD
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                return new Date(parts[0], parts[1] - 1, parts[2]);
+            }
+            return new Date(dateString);
+        }
+
+        function isSameDate(date1, date2) {
+            return date1.getFullYear() === date2.getFullYear() &&
+                   date1.getMonth() === date2.getMonth() &&
+                   date1.getDate() === date2.getDate();
         }
 
         function getTournamentFormat(format) {
@@ -2696,6 +2719,7 @@
         window.removeAvailability = removeAvailability;
         window.forceCheckTournaments = forceCheckTournaments;
         window.forceCreateTournament = forceCreateTournament;
+        window.deleteDay = deleteDay;
     </script>
 </body>
 </html>
