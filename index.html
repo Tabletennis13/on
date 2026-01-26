@@ -1,1 +1,2662 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Турниры по настольному теннису</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #e63946;
+            --secondary-color: #1d3557;
+            --accent-color: #457b9d;
+            --light-color: #f1faee;
+            --success-color: #2a9d8f;
+            --warning-color: #e9c46a;
+            --danger-color: #e63946;
+            --gray-light: #f8f9fa;
+            --gray: #adb5bd;
+            --gray-dark: #495057;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: var(--secondary-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Шапка */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 20px 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .logo i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* Кнопки */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--secondary-color);
+            color: var(--secondary-color);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: var(--secondary-color);
+        }
+
+        .btn-admin {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        /* Календарь */
+        .calendar-section {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+        }
+
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .day-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            background: var(--light-color);
+            border-radius: 8px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            border: 2px solid var(--gray-light);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .day-cell:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .day-cell.available {
+            background: var(--light-color);
+            border-color: var(--success-color);
+        }
+
+        .day-cell.full {
+            background: #ffeaa7;
+            border-color: var(--warning-color);
+        }
+
+        .day-cell.tournament {
+            background: #a8dadc;
+            border-color: var(--success-color);
+        }
+
+        .day-cell.past {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .day-cell.today {
+            border: 3px solid var(--primary-color);
+        }
+
+        .day-cell.selected {
+            border: 3px solid var(--primary-color);
+            background: #a8dadc;
+        }
+
+        .day-cell.multi-select {
+            background: #e9f7fe;
+            border-color: var(--accent-color);
+        }
+
+        .day-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .day-info {
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .participants-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        /* Секции */
+        .my-registrations, .upcoming-tournaments, .admin-section, .availability-section {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: var(--secondary-color);
+        }
+
+        /* Списки */
+        .registrations-list, .tournaments-list, .availability-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .registration-card, .tournament-card, .availability-card {
+            background: var(--light-color);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid var(--accent-color);
+        }
+
+        .tournament-card.tournament-active {
+            border-left-color: var(--primary-color);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .card-date {
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .card-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .status-open { background: #d4edda; color: #155724; }
+        .status-full { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #cce5ff; color: #004085; }
+        .status-completed { background: #d1ecf1; color: #0c5460; }
+        .status-available { background: #d4edda; color: #155724; }
+
+        .participants-list {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--gray-light);
+        }
+
+        .participant-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+        }
+
+        /* Модальные окна */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-wide {
+            max-width: 800px;
+        }
+
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--gray-dark);
+        }
+
+        .close:hover {
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--gray-light);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        /* Админ панель */
+        .admin-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .admin-day-form {
+            background: var(--light-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* Мультивыбор */
+        .multi-select-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--light-color);
+            border-radius: var(--border-radius);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .selected-dates {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .date-tag {
+            background: var(--accent-color);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .date-tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+            box-shadow: var(--box-shadow);
+        }
+
+        .notification.success { background: var(--success-color); }
+        .notification.error { background: var(--danger-color); }
+        .notification.info { background: var(--accent-color); }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            
+            .logo {
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+            
+            .auth-section {
+                justify-content: center;
+            }
+            
+            .calendar {
+                grid-template-columns: repeat(7, 1fr);
+            }
+            
+            .day-cell {
+                padding: 5px;
+            }
+            
+            .day-number {
+                font-size: 1rem;
+            }
+            
+            .day-info {
+                font-size: 0.7rem;
+            }
+            
+            .registrations-list, .tournaments-list, .availability-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-controls, .multi-select-controls {
+                flex-direction: column;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .calendar {
+                grid-template-columns: repeat(7, 1fr);
+                font-size: 0.9rem;
+                gap: 5px;
+            }
+            
+            .day-cell {
+                padding: 3px;
+            }
+            
+            body {
+                padding: 10px;
+            }
+            
+            .calendar-section, .my-registrations, .upcoming-tournaments, .admin-section, .availability-section {
+                padding: 15px;
+            }
+            
+            .btn {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--gray);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: var(--gray-light);
+        }
+
+        /* Фикс для кликов в календаре */
+        .day-cell * {
+            pointer-events: none;
+        }
+
+        .day-cell {
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-table-tennis-paddle-ball"></i>
+                <h1>Турниры по настольному теннису</h1>
+            </div>
+            <div class="auth-section">
+                <div id="user-info" class="hidden">
+                    <span id="username"></span>
+                    <button onclick="logout()" class="btn btn-outline">Выйти</button>
+                    <button onclick="showAdminPanel()" class="btn btn-admin hidden" id="admin-btn">
+                        <i class="fas fa-cog"></i> Админ
+                    </button>
+                </div>
+                <div id="auth-buttons">
+                    <button onclick="showModal('login-modal')" class="btn">Войти</button>
+                    <button onclick="showModal('register-modal')" class="btn btn-primary">Регистрация</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Основной контент -->
+        <main id="main-content">
+            <!-- Календарь -->
+            <section class="calendar-section">
+                <h2><i class="far fa-calendar-alt"></i> Календарь турниров</h2>
+                
+                <div class="multi-select-controls" id="multi-select-controls">
+                    <div>
+                        <button onclick="toggleMultiSelectMode()" class="btn btn-outline" id="multi-select-toggle">
+                            <i class="fas fa-plus"></i> Выбрать несколько дат
+                        </button>
+                        <span id="selected-count" class="hidden">Выбрано: <span id="selected-dates-count">0</span> дат</span>
+                    </div>
+                    <div>
+                        <button onclick="saveMultipleRegistrations()" class="btn btn-success hidden" id="save-multiple-btn">
+                            <i class="fas fa-save"></i> Сохранить выбранные
+                        </button>
+                        <button onclick="cancelMultiSelect()" class="btn btn-danger hidden" id="cancel-multi-btn">
+                            <i class="fas fa-times"></i> Отмена
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="selected-dates" id="selected-dates-list"></div>
+                
+                <div class="calendar-controls">
+                    <button onclick="changeMonth(-1)" class="btn btn-outline">
+                        <i class="fas fa-chevron-left"></i> Предыдущий
+                    </button>
+                    <h3 id="current-month"></h3>
+                    <button onclick="changeMonth(1)" class="btn btn-outline">
+                        Следующий <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="calendar" id="calendar">
+                    <!-- Календарь будет сгенерирован JavaScript -->
+                </div>
+            </section>
+
+            <!-- Мои записи -->
+            <section class="my-registrations">
+                <h2><i class="far fa-clipboard"></i> Мои записи</h2>
+                <div class="registrations-list" id="my-registrations-list">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </section>
+
+            <!-- Моя доступность -->
+            <section class="availability-section">
+                <h2><i class="fas fa-calendar-check"></i> Моя доступность</h2>
+                <p class="availability-info">Выберите даты, когда вы свободны для игры. Когда на одну из этих дат наберется 3+ человека, автоматически создастся турнир.</p>
+                <div class="availability-list" id="my-availability-list">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </section>
+
+            <!-- Ближайшие турниры -->
+            <section class="upcoming-tournaments">
+                <h2><i class="fas fa-trophy"></i> Ближайшие турниры</h2>
+                <div class="tournaments-list" id="tournaments-list">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Админ панель (скрыта по умолчанию) -->
+        <section id="admin-panel" class="admin-section hidden">
+            <h2><i class="fas fa-crown"></i> Административная панель</h2>
+            
+            <div class="admin-controls">
+                <button onclick="showModal('create-day-modal')" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Создать день
+                </button>
+                <button onclick="showModal('create-tournament-modal')" class="btn btn-success">
+                    <i class="fas fa-trophy"></i> Создать турнир
+                </button>
+                <button onclick="loadAllRegistrations()" class="btn btn-outline">
+                    <i class="fas fa-users"></i> Все записи
+                </button>
+                <button onclick="loadAllAvailability()" class="btn btn-outline">
+                    <i class="fas fa-calendar-alt"></i> Вся доступность
+                </button>
+                <button onclick="forceCheckTournaments()" class="btn btn-warning">
+                    <i class="fas fa-sync"></i> Проверить турниры
+                </button>
+                <button onclick="hideAdminPanel()" class="btn btn-danger">
+                    <i class="fas fa-arrow-left"></i> Назад
+                </button>
+            </div>
+
+            <div id="admin-content">
+                <div class="loading">Загрузка данных...</div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Модальные окна -->
+    <!-- Вход -->
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="hideModal('login-modal')">&times;</span>
+            <h2>Вход в систему</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="Ваш email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Пароль</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="Пароль" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Войти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Регистрация -->
+    <div id="register-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="hideModal('register-modal')">&times;</span>
+            <h2>Регистрация</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" class="form-control" placeholder="example@mail.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Пароль</label>
+                    <input type="password" id="register-password" class="form-control" placeholder="Не менее 6 символов" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-username">Имя пользователя</label>
+                    <input type="text" id="register-username" class="form-control" placeholder="Ваш никнейм" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-fullname">Полное имя</label>
+                    <input type="text" id="register-fullname" class="form-control" placeholder="Иван Иванов" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Детали дня -->
+    <div id="day-details-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="hideModal('day-details-modal')">&times;</span>
+            <h2 id="day-title"></h2>
+            <div id="day-details"></div>
+            <div class="modal-actions">
+                <button onclick="registerForDay()" class="btn btn-primary" id="register-btn">
+                    <i class="fas fa-user-plus"></i> Записаться
+                </button>
+                <button onclick="cancelRegistration()" class="btn btn-danger hidden" id="cancel-btn">
+                    <i class="fas fa-user-minus"></i> Отменить запись
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Создание дня -->
+    <div id="create-day-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="hideModal('create-day-modal')">&times;</span>
+            <h2>Создать игровой день</h2>
+            <form id="create-day-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="day-date">Дата</label>
+                        <input type="date" id="day-date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="max-participants">Макс. участников</label>
+                        <input type="number" id="max-participants" class="form-control" value="8" min="2" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="min-participants">Мин. для турнира</label>
+                    <input type="number" id="min-participants" class="form-control" value="3" min="2" required>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="auto-tournament" checked> Автоматически создать турнир при наборе
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="admin-notes">Примечание (опционально)</label>
+                    <textarea id="admin-notes" class="form-control" rows="3" placeholder="Дополнительная информация..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Создать день</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Создание турнира -->
+    <div id="create-tournament-modal" class="modal hidden">
+        <div class="modal-content modal-wide">
+            <span class="close" onclick="hideModal('create-tournament-modal')">&times;</span>
+            <h2>Создать турнир</h2>
+            <form id="create-tournament-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tournament-date">Дата турнира</label>
+                        <select id="tournament-date" class="form-control" required>
+                            <option value="">Выберите дату</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tournament-name">Название турнира</label>
+                        <input type="text" id="tournament-name" class="form-control" placeholder="Например: Весенний кубок" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tournament-format">Формат</label>
+                        <select id="tournament-format" class="form-control">
+                            <option value="round-robin">Круговая система</option>
+                            <option value="elimination">Олимпийская система</option>
+                            <option value="groups">Группы + плей-офф</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tournament-start">Время начала</label>
+                        <input type="time" id="tournament-start" class="form-control" value="18:00">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="tournament-description">Описание (опционально)</label>
+                    <textarea id="tournament-description" class="form-control" rows="3" placeholder="Дополнительная информация о турнире..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Создать турнир</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Все записи -->
+    <div id="all-registrations-modal" class="modal hidden">
+        <div class="modal-content modal-wide">
+            <span class="close" onclick="hideModal('all-registrations-modal')">&times;</span>
+            <h2>Все записи на турниры</h2>
+            <div id="all-registrations-content">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вся доступность -->
+    <div id="all-availability-modal" class="modal hidden">
+        <div class="modal-content modal-wide">
+            <span class="close" onclick="hideModal('all-availability-modal')">&times;</span>
+            <h2>Вся доступность игроков</h2>
+            <div id="all-availability-content">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============= КОНФИГУРАЦИЯ =============
+        const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE';
+
+        // Инициализация Supabase
+        let supabaseClient;
+        
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (error) {
+            console.error('Ошибка инициализации Supabase:', error);
+            supabaseClient = null;
+        }
+
+        // Глобальные переменные
+        let currentUser = null;
+        let currentDate = new Date();
+        let tournamentDays = [];
+        let selectedDay = null;
+        let myRegistrations = [];
+        let myAvailability = [];
+        let selectedDates = new Set();
+        let isMultiSelectMode = false;
+
+        // ============= ИНИЦИАЛИЗАЦИЯ =============
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeApp();
+            setupEventListeners();
+        });
+
+        async function initializeApp() {
+            await checkAuth();
+            await loadInitialData();
+        }
+
+        function setupEventListeners() {
+            // Формы
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+            document.getElementById('create-day-form').addEventListener('submit', handleCreateDay);
+            document.getElementById('create-tournament-form').addEventListener('submit', handleCreateTournament);
+        }
+
+        // ============= АВТОРИЗАЦИЯ =============
+        async function checkAuth() {
+            if (!supabaseClient) {
+                showNotification('Ошибка подключения к базе данных', 'error');
+                return;
+            }
+            
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            if (session) {
+                currentUser = session.user;
+                await loadUserProfile();
+                showUserInfo();
+            } else {
+                showAuthButtons();
+            }
+        }
+
+        async function loadUserProfile() {
+            if (!supabaseClient || !currentUser) return;
+            
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (profile) {
+                currentUser.profile = profile;
+            }
+        }
+
+        function showUserInfo() {
+            document.getElementById('auth-buttons').classList.add('hidden');
+            const userInfo = document.getElementById('user-info');
+            const usernameSpan = document.getElementById('username');
+            
+            if (currentUser.profile) {
+                usernameSpan.textContent = currentUser.profile.username || currentUser.email;
+            } else {
+                usernameSpan.textContent = currentUser.email;
+            }
+            
+            // Проверка на админа - ВСТАВЬТЕ ВАШ EMAIL
+            const adminEmails = [
+                'ваш.email@gmail.com',      // Замените на ваш email
+                'admin@example.com'         // Тестовый админ
+            ];
+            
+            if (adminEmails.includes(currentUser.email)) {
+                document.getElementById('admin-btn').classList.remove('hidden');
+            }
+            
+            userInfo.classList.remove('hidden');
+        }
+
+        function showAuthButtons() {
+            document.getElementById('user-info').classList.add('hidden');
+            document.getElementById('auth-buttons').classList.remove('hidden');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            
+            if (error) {
+                showNotification(error.message, 'error');
+            } else {
+                hideModal('login-modal');
+                showNotification('Успешный вход!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const username = document.getElementById('register-username').value;
+            const fullName = document.getElementById('register-fullname').value;
+            
+            // Только регистрация в Auth, профиль создаст триггер
+            const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        username: username,
+                        full_name: fullName
+                    }
+                }
+            });
+            
+            if (authError) {
+                showNotification(authError.message, 'error');
+            } else {
+                showNotification('Регистрация успешна! Проверьте почту для подтверждения.', 'success');
+                hideModal('register-modal');
+            }
+        }
+
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            location.reload();
+        }
+
+        // ============= ЗАГРУЗКА ДАННЫХ =============
+        async function loadInitialData() {
+            if (!currentUser) return;
+            
+            try {
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadMyRegistrations(),
+                    loadMyAvailability(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                showNotification('Ошибка загрузки данных', 'error');
+            }
+        }
+
+        async function loadTournamentDays() {
+            if (!supabaseClient) return;
+            
+            const { data, error } = await supabaseClient
+                .from('tournament_days')
+                .select('*')
+                .gte('date', new Date().toISOString().split('T')[0])
+                .order('date', { ascending: true });
+            
+            if (error) throw error;
+            
+            tournamentDays = data || [];
+        }
+
+        async function loadMyRegistrations() {
+            if (!supabaseClient || !currentUser) return;
+            
+            const { data, error } = await supabaseClient
+                .from('registrations')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .eq('status', 'confirmed')
+                .order('registration_date', { ascending: false });
+            
+            if (error) throw error;
+            
+            myRegistrations = data || [];
+            displayMyRegistrations();
+        }
+
+        async function loadMyAvailability() {
+            if (!supabaseClient || !currentUser) return;
+            
+            const { data, error } = await supabaseClient
+                .from('availability')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .eq('status', 'active')
+                .order('date', { ascending: true });
+            
+            if (error) {
+                console.log('Таблица availability не найдена или ошибка загрузки');
+                myAvailability = [];
+            } else {
+                myAvailability = data || [];
+            }
+            displayMyAvailability();
+        }
+
+        async function loadUpcomingTournaments() {
+            if (!supabaseClient) return;
+            
+            try {
+                // Сначала получаем дни
+                const { data: days, error: daysError } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .gte('date', new Date().toISOString().split('T')[0])
+                    .eq('is_active', true)
+                    .order('date', { ascending: true })
+                    .limit(10);
+                
+                if (daysError) throw daysError;
+                
+                // Получаем турниры отдельно
+                const dayIds = days.map(day => day.id);
+                let tournaments = [];
+                
+                if (dayIds.length > 0) {
+                    const { data: tournamentsData } = await supabaseClient
+                        .from('tournaments')
+                        .select('*')
+                        .in('tournament_day_id', dayIds);
+                    
+                    tournaments = tournamentsData || [];
+                }
+                
+                // Соединяем данные
+                const combinedData = days.map(day => ({
+                    ...day,
+                    tournaments: tournaments.filter(t => t.tournament_day_id === day.id)
+                }));
+                
+                displayTournaments(combinedData || []);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки турниров:', error);
+            }
+        }
+
+        // ============= КАЛЕНДАРЬ И МУЛЬТИВЫБОР =============
+        function updateCalendar() {
+            const monthNames = [
+                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ];
+            
+            document.getElementById('current-month').textContent = 
+                `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+            
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+            
+            // Заголовки дней недели
+            const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            days.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                dayHeader.textContent = day;
+                calendar.appendChild(dayHeader);
+            });
+            
+            // Получение первого дня месяца
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const startingDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+            
+            // Пустые ячейки в начале
+            for (let i = 0; i < startingDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'day-cell empty';
+                calendar.appendChild(emptyCell);
+            }
+            
+            // Дни месяца - ИСПРАВЛЕННАЯ ЧАСТЬ ДЛЯ КОРРЕКТНОЙ РАБОТЫ С ДАТАМИ
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const totalDays = lastDay.getDate();
+            
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                dayDate.setHours(0, 0, 0, 0); // Устанавливаем время в 00:00:00
+                
+                const dateString = formatDateForStorage(dayDate);
+                
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day-cell';
+                dayCell.dataset.date = dateString;
+                dayCell.dataset.day = day;
+                
+                // Проверяем, сегодня ли это - ИСПРАВЛЕНО СРАВНЕНИЕ
+                if (dayDate.getTime() === today.getTime()) {
+                    dayCell.classList.add('today');
+                }
+                
+                // Проверяем, прошедшая ли это дата - ИСПРАВЛЕНО СРАВНЕНИЕ
+                if (dayDate < today) {
+                    dayCell.classList.add('past');
+                }
+                
+                // Ищем день в tournamentDays
+                const tournamentDay = tournamentDays.find(d => d.date === dateString);
+                
+                // Проверяем, выбран ли день в мультивыборе
+                if (selectedDates.has(dateString)) {
+                    dayCell.classList.add('multi-select');
+                }
+                
+                if (tournamentDay) {
+                    if (tournamentDay.is_active) {
+                        if (tournamentDay.is_tournament) {
+                            dayCell.classList.add('tournament');
+                            dayCell.innerHTML = '<div class="day-number">' + day + '</div><div class="day-info">Турнир</div>' + 
+                                (tournamentDay.current_participants > 0 ? '<div class="participants-badge">' + tournamentDay.current_participants + '</div>' : '');
+                        } else {
+                            dayCell.classList.add('available');
+                            dayCell.innerHTML = '<div class="day-number">' + day + '</div><div class="day-info">Запись открыта</div>' + 
+                                (tournamentDay.current_participants > 0 ? '<div class="participants-badge">' + tournamentDay.current_participants + '</div>' : '');
+                            
+                            // Проверяем, записан ли пользователь
+                            const isRegistered = myRegistrations.some(r => r.tournament_day_id === tournamentDay.id);
+                            if (isRegistered) {
+                                dayCell.classList.add('selected');
+                                dayCell.innerHTML += '<div class="day-info"><i class="fas fa-check"></i> Вы записаны</div>';
+                            }
+                            
+                            // Проверяем, отмечена ли доступность
+                            const isAvailable = myAvailability.some(a => a.date === dateString || a.tournament_day_id === tournamentDay.id);
+                            if (isAvailable) {
+                                dayCell.innerHTML += '<div class="day-info"><i class="fas fa-calendar-check"></i> Вы свободны</div>';
+                            }
+                        }
+                        
+                        // Проверяем, заполнен ли день
+                        if (tournamentDay.current_participants >= tournamentDay.max_participants) {
+                            dayCell.classList.add('full');
+                            dayCell.innerHTML = '<div class="day-number">' + day + '</div><div class="day-info">Мест нет</div><div class="participants-badge">' + tournamentDay.current_participants + '</div>';
+                        }
+                    }
+                } else {
+                    dayCell.innerHTML = '<div class="day-number">' + day + '</div><div class="day-info">Нет записи</div>';
+                }
+                
+                // Обработчик клика
+                if (!dayCell.classList.contains('past')) {
+                    dayCell.style.cursor = 'pointer';
+                    
+                    dayCell.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const clickedDateStr = dayCell.dataset.date;
+                        const clickedDay = dayCell.dataset.day;
+                        
+                        console.log('Клик по дате:', clickedDateStr, 'День:', clickedDay);
+                        handleDayCellClick(clickedDateStr, tournamentDay);
+                    });
+                } else {
+                    dayCell.style.cursor = 'default';
+                }
+                
+                calendar.appendChild(dayCell);
+            }
+        }
+
+        function handleDayCellClick(dateString, tournamentDay) {
+            console.log('Обработка клика:', dateString);
+            
+            // Если включен режим мультивыбора
+            if (isMultiSelectMode) {
+                toggleDateSelection(dateString, tournamentDay);
+            } 
+            // Обычный режим - показать детали дня
+            else {
+                showDayDetails(dateString);
+            }
+        }
+
+        function toggleDateSelection(dateString, tournamentDay) {
+            if (!isMultiSelectMode) return;
+            
+            if (selectedDates.has(dateString)) {
+                selectedDates.delete(dateString);
+                showNotification('Дата ' + formatShortDate(parseDate(dateString)) + ' удалена из выбора', 'info');
+            } else {
+                // Проверяем, можно ли записаться на этот день
+                if (tournamentDay) {
+                    if (tournamentDay.current_participants >= tournamentDay.max_participants) {
+                        showNotification('На этот день уже нет свободных мест', 'error');
+                        return;
+                    }
+                    if (tournamentDay.is_tournament) {
+                        showNotification('На турнир нельзя записаться через мультивыбор', 'error');
+                        return;
+                    }
+                }
+                
+                selectedDates.add(dateString);
+                showNotification('Дата ' + formatShortDate(parseDate(dateString)) + ' добавлена', 'success');
+            }
+            
+            updateSelectedDatesList();
+            updateCalendar();
+        }
+
+        function toggleMultiSelectMode() {
+            isMultiSelectMode = !isMultiSelectMode;
+            const toggleBtn = document.getElementById('multi-select-toggle');
+            const saveBtn = document.getElementById('save-multiple-btn');
+            const cancelBtn = document.getElementById('cancel-multi-btn');
+            const selectedCount = document.getElementById('selected-count');
+            
+            if (isMultiSelectMode) {
+                toggleBtn.innerHTML = '<i class="fas fa-times"></i> Закончить выбор';
+                toggleBtn.classList.remove('btn-outline');
+                toggleBtn.classList.add('btn-primary');
+                saveBtn.classList.remove('hidden');
+                cancelBtn.classList.remove('hidden');
+                selectedCount.classList.remove('hidden');
+                updateSelectedDatesList();
+            } else {
+                toggleBtn.innerHTML = '<i class="fas fa-plus"></i> Выбрать несколько дат';
+                toggleBtn.classList.remove('btn-primary');
+                toggleBtn.classList.add('btn-outline');
+                saveBtn.classList.add('hidden');
+                cancelBtn.classList.add('hidden');
+                selectedCount.classList.add('hidden');
+                selectedDates.clear();
+            }
+            updateCalendar();
+        }
+
+        function updateSelectedDatesList() {
+            const container = document.getElementById('selected-dates-list');
+            const countSpan = document.getElementById('selected-dates-count');
+            
+            countSpan.textContent = selectedDates.size;
+            
+            if (selectedDates.size === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const sortedDates = Array.from(selectedDates).sort();
+            container.innerHTML = sortedDates.map(dateStr => {
+                const date = parseDate(dateStr);
+                return '<div class="date-tag">' + formatShortDate(date) + '<button onclick="removeSelectedDate(\'' + dateStr + '\')">&times;</button></div>';
+            }).join('');
+        }
+
+        function removeSelectedDate(dateString) {
+            selectedDates.delete(dateString);
+            updateSelectedDatesList();
+            updateCalendar();
+        }
+
+        function cancelMultiSelect() {
+            selectedDates.clear();
+            toggleMultiSelectMode();
+        }
+
+        // ============= СОХРАНЕНИЕ ДОСТУПНОСТИ И АВТОТУРНИР =============
+        async function saveMultipleRegistrations() {
+            if (!currentUser) {
+                showNotification('Сначала войдите в систему', 'error');
+                return;
+            }
+            
+            if (selectedDates.size === 0) {
+                showNotification('Выберите хотя бы одну дату', 'error');
+                return;
+            }
+            
+            try {
+                const dateArray = Array.from(selectedDates);
+                let successCount = 0;
+                let createdTournaments = 0;
+                
+                for (const dateStr of dateArray) {
+                    // Находим день в tournamentDays
+                    const day = tournamentDays.find(d => d.date === dateStr);
+                    
+                    if (day) {
+                        // Добавляем доступность
+                        const { error: availError } = await supabaseClient
+                            .from('availability')
+                            .insert({
+                                user_id: currentUser.id,
+                                tournament_day_id: day.id,
+                                date: dateStr,
+                                status: 'active'
+                            });
+                        
+                        if (!availError) {
+                            successCount++;
+                            // После добавления доступности проверяем, нужно ли создавать турнир
+                            const tournamentCreated = await checkAndCreateTournamentFromAvailability(day.id);
+                            if (tournamentCreated) createdTournaments++;
+                        }
+                    } else {
+                        // Если дня нет в расписании, просто добавляем доступность без tournament_day_id
+                        const { error: availError } = await supabaseClient
+                            .from('availability')
+                            .insert({
+                                user_id: currentUser.id,
+                                date: dateStr,
+                                status: 'active'
+                            });
+                        
+                        if (!availError) successCount++;
+                    }
+                }
+                
+                let message = 'Добавлено ' + successCount + ' дат доступности';
+                if (createdTournaments > 0) {
+                    message += '. Создано ' + createdTournaments + ' турниров!';
+                }
+                
+                showNotification(message, 'success');
+                selectedDates.clear();
+                toggleMultiSelectMode();
+                
+                // Обновляем данные
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadMyAvailability(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+                
+            } catch (error) {
+                console.error('Ошибка сохранения доступности:', error);
+                showNotification('Ошибка при сохранении доступности', 'error');
+            }
+        }
+
+        // Функция для проверки и создания турнира из доступности
+        async function checkAndCreateTournamentFromAvailability(dayId) {
+            try {
+                // Получаем информацию о дне
+                const { data: day, error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', dayId)
+                    .single();
+                
+                if (dayError || !day) return false;
+                
+                // Если день уже турнир или не поддерживает автотурнир
+                if (day.is_tournament || !day.auto_tournament || !day.is_active) {
+                    return false;
+                }
+                
+                // Получаем количество доступных игроков
+                const { data: availability, error: availError } = await supabaseClient
+                    .from('availability')
+                    .select('user_id')
+                    .eq('tournament_day_id', dayId)
+                    .eq('status', 'active');
+                
+                if (availError || !availability) return false;
+                
+                const availableCount = availability.length;
+                
+                // Проверяем условия создания турнира
+                if (availableCount >= day.min_participants) {
+                    // Проверяем, есть ли уже турнир
+                    const { data: existingTournament } = await supabaseClient
+                        .from('tournaments')
+                        .select('id')
+                        .eq('tournament_day_id', dayId)
+                        .single();
+                    
+                    if (existingTournament) return false; // Турнир уже существует
+                    
+                    // Создаем турнир
+                    const { error: tournamentError } = await supabaseClient
+                        .from('tournaments')
+                        .insert({
+                            tournament_day_id: dayId,
+                            name: 'Турнир ' + formatDate(new Date(day.date)),
+                            format: 'round-robin',
+                            status: 'scheduled'
+                        });
+                    
+                    if (!tournamentError) {
+                        // Помечаем день как турнир
+                        await supabaseClient
+                            .from('tournament_days')
+                            .update({ 
+                                is_tournament: true,
+                                status: 'confirmed',
+                                tournament_name: 'Турнир ' + formatDate(new Date(day.date))
+                            })
+                            .eq('id', dayId);
+                        
+                        console.log('Турнир создан автоматически для дня ' + day.date + ' (' + availableCount + ' участников)');
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка создания турнира из доступности:', error);
+            }
+            return false;
+        }
+
+        // Функция для принудительной проверки всех дней на создание турниров
+        async function forceCheckTournaments() {
+            showNotification('Проверяем дни на создание турниров...', 'info');
+            
+            try {
+                // Получаем все активные дни с автотурниром, которые еще не турниры
+                const { data: days, error } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('is_active', true)
+                    .eq('auto_tournament', true)
+                    .eq('is_tournament', false)
+                    .gte('date', new Date().toISOString().split('T')[0]);
+                
+                if (error || !days || days.length === 0) {
+                    showNotification('Нет дней для проверки', 'info');
+                    return;
+                }
+                
+                let tournamentsCreated = 0;
+                
+                for (const day of days) {
+                    const created = await checkAndCreateTournamentFromAvailability(day.id);
+                    if (created) tournamentsCreated++;
+                }
+                
+                if (tournamentsCreated > 0) {
+                    showNotification('Создано ' + tournamentsCreated + ' турниров!', 'success');
+                    // Обновляем данные
+                    await Promise.all([
+                        loadTournamentDays(),
+                        loadUpcomingTournaments()
+                    ]);
+                    updateCalendar();
+                } else {
+                    showNotification('Новых турниров для создания не найдено', 'info');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка принудительной проверки:', error);
+                showNotification('Ошибка проверки', 'error');
+            }
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            updateCalendar();
+        }
+
+        // ============= ОТОБРАЖЕНИЕ ДАННЫХ =============
+        function displayMyRegistrations() {
+            const container = document.getElementById('my-registrations-list');
+            
+            if (!myRegistrations.length) {
+                container.innerHTML = '<div class="empty-state"><i class="far fa-calendar-times"></i><h3>У вас нет записей</h3><p>Выберите дату в календаре, чтобы записаться на игру</p></div>';
+                return;
+            }
+            
+            // Получаем информацию о днях для регистраций
+            const registrationPromises = myRegistrations.map(async (reg) => {
+                const { data: day } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', reg.tournament_day_id)
+                    .single();
+                
+                return { reg, day };
+            });
+            
+            Promise.all(registrationPromises).then(results => {
+                let html = '';
+                results.forEach(({ reg, day }) => {
+                    if (!day) return;
+                    
+                    const date = parseDate(day.date);
+                    const isTournament = day.is_tournament;
+                    
+                    html += '<div class="registration-card ' + (isTournament ? 'tournament-active' : '') + '">';
+                    html += '<div class="card-header"><div class="card-date">' + formatDate(date) + '</div>';
+                    html += '<div class="card-status status-' + (day.status || 'confirmed') + '">' + (isTournament ? 'Турнир' : 'Тренировка') + '</div></div>';
+                    html += '<p>Участников: ' + day.current_participants + '/' + day.max_participants + '</p>';
+                    if (day.tournament_name) html += '<p><strong>' + day.tournament_name + '</strong></p>';
+                    if (day.admin_notes) html += '<p><small>' + day.admin_notes + '</small></p>';
+                    html += '<button onclick="cancelSpecificRegistration(\'' + reg.id + '\')" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Отменить</button>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            });
+        }
+
+        function displayMyAvailability() {
+            const container = document.getElementById('my-availability-list');
+            
+            if (!myAvailability.length) {
+                container.innerHTML = '<div class="empty-state"><i class="far fa-calendar-times"></i><h3>Вы еще не указали доступность</h3><p>Нажмите "Выбрать несколько дат" в календаре, чтобы отметить дни, когда вы свободны</p></div>';
+                return;
+            }
+            
+            // Получаем информацию о днях для доступности
+            const availabilityPromises = myAvailability.map(async (avail) => {
+                let day = null;
+                if (avail.tournament_day_id) {
+                    const { data: dayData } = await supabaseClient
+                        .from('tournament_days')
+                        .select('*')
+                        .eq('id', avail.tournament_day_id)
+                        .single();
+                    day = dayData;
+                }
+                
+                return { avail, day };
+            });
+            
+            Promise.all(availabilityPromises).then(results => {
+                let html = '';
+                results.forEach(async ({ avail, day }) => {
+                    const date = parseDate(avail.date);
+                    
+                    html += '<div class="availability-card">';
+                    html += '<div class="card-header"><div class="card-date">' + formatDate(date) + '</div>';
+                    html += '<div class="card-status status-available">Свободен</div></div>';
+                    
+                    if (day) {
+                        const availableCount = await getAvailableCount(day.id);
+                        html += '<p>Всего свободных: ' + availableCount + '/' + (day.max_participants || 8) + '</p>';
+                        if (day.min_participants) html += '<p>Для турнира нужно: ' + day.min_participants + '</p>';
+                        if (day.is_tournament) html += '<p><strong>Турнир создан!</strong></p>';
+                    } else {
+                        html += '<p>День еще не создан администратором</p>';
+                    }
+                    
+                    html += '<button onclick="removeAvailability(\'' + avail.id + '\')" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Удалить</button>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            });
+        }
+
+        async function getAvailableCount(dayId) {
+            const { data: availability } = await supabaseClient
+                .from('availability')
+                .select('id')
+                .eq('tournament_day_id', dayId)
+                .eq('status', 'active');
+            
+            return availability ? availability.length : 0;
+        }
+
+        async function removeAvailability(availabilityId) {
+            if (!confirm('Удалить эту дату из вашей доступности?')) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('availability')
+                    .delete()
+                    .eq('id', availabilityId);
+                
+                if (error) throw error;
+                
+                showNotification('Доступность удалена', 'success');
+                await loadMyAvailability();
+                updateCalendar();
+                
+            } catch (error) {
+                console.error('Ошибка удаления доступности:', error);
+                showNotification('Ошибка при удалении доступности', 'error');
+            }
+        }
+
+        function displayTournaments(tournaments) {
+            const container = document.getElementById('tournaments-list');
+            
+            if (!tournaments.length) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-trophy"></i><h3>Нет предстоящих турниров</h3><p>Турниры появятся здесь, когда наберется минимальное количество участников</p></div>';
+                return;
+            }
+            
+            // Сначала отфильтруем дни, которые не активны
+            const activeTournaments = tournaments.filter(day => day.is_active);
+            
+            if (activeTournaments.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-trophy"></i><h3>Нет активных турниров</h3><p>Турниры появятся здесь, когда наберется минимальное количество участников</p></div>';
+                return;
+            }
+            
+            let html = '';
+            
+            activeTournaments.forEach(day => {
+                const date = parseDate(day.date);
+                const isTournament = day.is_tournament;
+                const hasTournament = day.tournaments && day.tournaments.length > 0;
+                
+                let title = isTournament ? 'Турнир' : 'Игровой день';
+                if (hasTournament && day.tournaments[0].name) {
+                    title = day.tournaments[0].name;
+                }
+                
+                let autoTournamentHtml = '';
+                if (day.auto_tournament) {
+                    autoTournamentHtml = '<p><i class="fas fa-robot"></i> Турнир создастся при ' + day.min_participants + '+ участниках</p>';
+                }
+                
+                let notesHtml = '';
+                if (day.admin_notes) {
+                    notesHtml = '<p><small>' + day.admin_notes + '</small></p>';
+                }
+                
+                let buttonHtml = '';
+                if (!isTournament) {
+                    buttonHtml = '<button onclick="showDayDetails(\'' + day.date + '\')" class="btn btn-primary"><i class="fas fa-info-circle"></i> Подробнее</button>';
+                }
+                
+                html += '<div class="tournament-card ' + (isTournament ? 'tournament-active' : '') + '">';
+                html += '<div class="card-header"><div class="card-date">' + formatDate(date) + '</div>';
+                html += '<div class="card-status status-' + (day.status || 'open') + '">' + (isTournament ? 'Турнир' : 'Набор участников') + '</div></div>';
+                html += '<h4>' + title + '</h4>';
+                html += '<p>Участников: <strong>' + day.current_participants + '/' + day.max_participants + '</strong></p>';
+                html += autoTournamentHtml;
+                html += notesHtml;
+                html += '<div class="participants-list"><p><small><i class="fas fa-users"></i> Список участников:</small></p>';
+                html += '<div id="participants-' + day.id + '"><div class="loading">Загрузка...</div></div></div>';
+                html += buttonHtml;
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+            
+            // Загружаем участников для каждого дня
+            activeTournaments.forEach(day => {
+                loadParticipantsForDay(day.id);
+            });
+        }
+
+        async function loadParticipantsForDay(dayId) {
+            const { data, error } = await supabaseClient
+                .from('registrations')
+                .select('*, profiles (username, full_name)')
+                .eq('tournament_day_id', dayId)
+                .eq('status', 'confirmed');
+            
+            if (error) {
+                console.error('Ошибка загрузки участников:', error);
+                return;
+            }
+            
+            const container = document.getElementById('participants-' + dayId);
+            if (!container) return;
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p><small>Пока нет участников</small></p>';
+                return;
+            }
+            
+            let html = '';
+            data.forEach(reg => {
+                html += '<div class="participant-item">';
+                html += '<span>' + (reg.profiles.username || reg.profiles.full_name) + '</span>';
+                html += '<small>' + new Date(reg.registration_date).toLocaleDateString('ru-RU') + '</small>';
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // ============= РАБОТА С ДНЯМИ =============
+        async function showDayDetails(dateString) {
+            console.log('Показать детали дня:', dateString);
+            
+            if (!currentUser) {
+                showNotification('Сначала войдите в систему', 'error');
+                showModal('login-modal');
+                return;
+            }
+            
+            const day = tournamentDays.find(d => d.date === dateString);
+            if (!day) {
+                showNotification('День не найден в расписании', 'error');
+                return;
+            }
+            
+            selectedDay = day;
+            
+            // Загружаем участников для этого дня
+            const { data: participants } = await supabaseClient
+                .from('registrations')
+                .select('*, profiles (username, full_name)')
+                .eq('tournament_day_id', day.id)
+                .eq('status', 'confirmed');
+            
+            // Загружаем турнир, если есть
+            let tournament = null;
+            const { data: tournamentData } = await supabaseClient
+                .from('tournaments')
+                .select('*')
+                .eq('tournament_day_id', day.id)
+                .single();
+            
+            if (tournamentData) tournament = tournamentData;
+            
+            // Проверяем, записан ли пользователь
+            const isRegistered = participants?.some(p => p.user_id === currentUser.id);
+            
+            // Обновляем модальное окно
+            document.getElementById('day-title').textContent = formatDate(parseDate(dateString));
+            
+            let detailsHtml = '<div class="form-group">';
+            detailsHtml += '<p><strong>Статус:</strong> ' + (day.is_tournament ? 'Турнир' : 'Игровой день') + '</p>';
+            detailsHtml += '<p><strong>Участников:</strong> ' + day.current_participants + '/' + day.max_participants + '</p>';
+            if (day.min_participants) detailsHtml += '<p><strong>Для турнира нужно:</strong> ' + day.min_participants + ' участников</p>';
+            detailsHtml += '</div>';
+            
+            if (tournament) {
+                detailsHtml += '<div class="form-group"><h4>' + tournament.name + '</h4>';
+                if (tournament.description) detailsHtml += '<p>' + tournament.description + '</p>';
+                detailsHtml += '<p><strong>Формат:</strong> ' + getTournamentFormat(tournament.format) + '</p>';
+                if (tournament.start_time) detailsHtml += '<p><strong>Начало:</strong> ' + tournament.start_time + '</p>';
+                detailsHtml += '</div>';
+            }
+            
+            if (participants && participants.length > 0) {
+                detailsHtml += '<div class="form-group"><h4>Участники:</h4>';
+                participants.forEach(p => {
+                    detailsHtml += '<div class="participant-item"><span>' + (p.profiles.username || p.profiles.full_name) + '</span>';
+                    if (p.user_id === currentUser.id) detailsHtml += '<small>(Вы)</small>';
+                    detailsHtml += '</div>';
+                });
+                detailsHtml += '</div>';
+            }
+            
+            if (day.admin_notes) {
+                detailsHtml += '<div class="form-group"><h4>Примечание:</h4><p>' + day.admin_notes + '</p></div>';
+            }
+            
+            document.getElementById('day-details').innerHTML = detailsHtml;
+            
+            // Настраиваем кнопки
+            const registerBtn = document.getElementById('register-btn');
+            const cancelBtn = document.getElementById('cancel-btn');
+            
+            if (isRegistered) {
+                registerBtn.classList.add('hidden');
+                cancelBtn.classList.remove('hidden');
+            } else {
+                registerBtn.classList.remove('hidden');
+                cancelBtn.classList.add('hidden');
+                
+                if (day.current_participants >= day.max_participants) {
+                    registerBtn.disabled = true;
+                    registerBtn.innerHTML = '<i class="fas fa-times"></i> Мест нет';
+                } else {
+                    registerBtn.disabled = false;
+                    registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Записаться';
+                }
+            }
+            
+            showModal('day-details-modal');
+        }
+
+        async function registerForDay() {
+            if (!selectedDay || !currentUser) return;
+            
+            try {
+                // Проверяем, не записан ли уже
+                const { data: existing } = await supabaseClient
+                    .from('registrations')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .eq('tournament_day_id', selectedDay.id)
+                    .single();
+                
+                if (existing) {
+                    showNotification('Вы уже записаны на этот день', 'error');
+                    return;
+                }
+                
+                // Создаем запись
+                const { error: regError } = await supabaseClient
+                    .from('registrations')
+                    .insert({
+                        user_id: currentUser.id,
+                        tournament_day_id: selectedDay.id,
+                        status: 'confirmed'
+                    });
+                
+                if (regError) throw regError;
+                
+                // Обновляем счетчик участников
+                const newCount = selectedDay.current_participants + 1;
+                const { error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .update({ current_participants: newCount })
+                    .eq('id', selectedDay.id);
+                
+                if (dayError) throw dayError;
+                
+                // Удаляем из доступности если есть
+                await supabaseClient
+                    .from('availability')
+                    .delete()
+                    .eq('user_id', currentUser.id)
+                    .eq('tournament_day_id', selectedDay.id);
+                
+                // Проверяем, нужно ли создавать турнир из записей
+                if (selectedDay.auto_tournament && newCount >= selectedDay.min_participants && !selectedDay.is_tournament) {
+                    await checkAndCreateTournamentFromRegistrations(selectedDay.id, newCount);
+                }
+                
+                showNotification('Вы успешно записались!', 'success');
+                hideModal('day-details-modal');
+                
+                // Обновляем данные
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadMyRegistrations(),
+                    loadMyAvailability(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+                
+            } catch (error) {
+                console.error('Ошибка записи:', error);
+                showNotification('Ошибка при записи', 'error');
+            }
+        }
+
+        async function checkAndCreateTournamentFromRegistrations(dayId, participantCount) {
+            try {
+                // Получаем информацию о дне
+                const { data: day } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', dayId)
+                    .single();
+                
+                if (!day) return;
+                
+                // Получаем количество подтвержденных участников
+                const { data: registrations } = await supabaseClient
+                    .from('registrations')
+                    .select('id')
+                    .eq('tournament_day_id', dayId)
+                    .eq('status', 'confirmed');
+                
+                const confirmedCount = registrations ? registrations.length : 0;
+                
+                // Проверяем условия создания турнира
+                if (confirmedCount >= day.min_participants && !day.is_tournament) {
+                    // Создаем турнир
+                    const { error: tournamentError } = await supabaseClient
+                        .from('tournaments')
+                        .insert({
+                            tournament_day_id: dayId,
+                            name: 'Турнир ' + formatDate(parseDate(day.date)),
+                            format: 'round-robin',
+                            status: 'scheduled'
+                        });
+                    
+                    if (!tournamentError) {
+                        // Помечаем день как турнир
+                        await supabaseClient
+                            .from('tournament_days')
+                            .update({ 
+                                is_tournament: true,
+                                status: 'confirmed',
+                                tournament_name: 'Турнир ' + formatDate(parseDate(day.date))
+                            })
+                            .eq('id', dayId);
+                        
+                        showNotification('Турнир создан! На ' + formatDate(parseDate(day.date)) + ' записалось ' + confirmedCount + ' игроков', 'success');
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка создания турнира из записей:', error);
+            }
+        }
+
+        async function cancelRegistration() {
+            if (!selectedDay || !currentUser) return;
+            
+            try {
+                // Находим запись
+                const { data: registration } = await supabaseClient
+                    .from('registrations')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .eq('tournament_day_id', selectedDay.id)
+                    .single();
+                
+                if (!registration) {
+                    showNotification('Запись не найдена', 'error');
+                    return;
+                }
+                
+                // Удаляем запись
+                const { error: deleteError } = await supabaseClient
+                    .from('registrations')
+                    .delete()
+                    .eq('id', registration.id);
+                
+                if (deleteError) throw deleteError;
+                
+                // Обновляем счетчик участников
+                const newCount = Math.max(0, selectedDay.current_participants - 1);
+                const { error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .update({ current_participants: newCount })
+                    .eq('id', selectedDay.id);
+                
+                if (dayError) throw dayError;
+                
+                // Если участников стало меньше минимального, убираем турнир
+                if (newCount < selectedDay.min_participants && selectedDay.is_tournament) {
+                    await supabaseClient
+                        .from('tournament_days')
+                        .update({ 
+                            is_tournament: false,
+                            status: 'open',
+                            tournament_name: null
+                        })
+                        .eq('id', selectedDay.id);
+                    
+                    // Удаляем турнир
+                    await supabaseClient
+                        .from('tournaments')
+                        .delete()
+                        .eq('tournament_day_id', selectedDay.id);
+                }
+                
+                showNotification('Запись отменена', 'success');
+                hideModal('day-details-modal');
+                
+                // Обновляем данные
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadMyRegistrations(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+                
+            } catch (error) {
+                console.error('Ошибка отмены:', error);
+                showNotification('Ошибка при отмене записи', 'error');
+            }
+        }
+
+        async function cancelSpecificRegistration(registrationId) {
+            if (!currentUser) return;
+            
+            try {
+                // Получаем информацию о записи
+                const { data: registration } = await supabaseClient
+                    .from('registrations')
+                    .select('*')
+                    .eq('id', registrationId)
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (!registration) {
+                    showNotification('Запись не найдена', 'error');
+                    return;
+                }
+                
+                // Получаем информацию о дне
+                const { data: day } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', registration.tournament_day_id)
+                    .single();
+                
+                // Удаляем запись
+                const { error: deleteError } = await supabaseClient
+                    .from('registrations')
+                    .delete()
+                    .eq('id', registrationId);
+                
+                if (deleteError) throw deleteError;
+                
+                // Обновляем счетчик участников
+                if (day) {
+                    const newCount = Math.max(0, day.current_participants - 1);
+                    const { error: dayError } = await supabaseClient
+                        .from('tournament_days')
+                        .update({ current_participants: newCount })
+                        .eq('id', day.id);
+                    
+                    if (dayError) throw dayError;
+                    
+                    // Если участников стало меньше минимального, убираем турнир
+                    if (newCount < day.min_participants && day.is_tournament) {
+                        await supabaseClient
+                            .from('tournament_days')
+                            .update({ 
+                                is_tournament: false,
+                                status: 'open',
+                                tournament_name: null
+                            })
+                            .eq('id', day.id);
+                        
+                        // Удаляем турнир
+                        await supabaseClient
+                            .from('tournaments')
+                            .delete()
+                            .eq('tournament_day_id', day.id);
+                    }
+                }
+                
+                showNotification('Запись отменена', 'success');
+                
+                // Обновляем данные
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadMyRegistrations(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+                
+            } catch (error) {
+                console.error('Ошибка отмены:', error);
+                showNotification('Ошибка при отмене записи', 'error');
+            }
+        }
+
+        // ============= АДМИН ПАНЕЛЬ =============
+        function showAdminPanel() {
+            document.getElementById('main-content').classList.add('hidden');
+            document.getElementById('admin-panel').classList.remove('hidden');
+            loadAdminData();
+        }
+
+        function hideAdminPanel() {
+            document.getElementById('main-content').classList.remove('hidden');
+            document.getElementById('admin-panel').classList.add('hidden');
+        }
+
+        async function handleCreateDay(e) {
+            e.preventDefault();
+            
+            const date = document.getElementById('day-date').value;
+            const maxParticipants = parseInt(document.getElementById('max-participants').value);
+            const minParticipants = parseInt(document.getElementById('min-participants').value);
+            const autoTournament = document.getElementById('auto-tournament').checked;
+            const adminNotes = document.getElementById('admin-notes').value;
+            
+            try {
+                // Проверяем, существует ли уже день
+                const { data: existing } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('date', date)
+                    .single();
+                
+                if (existing) {
+                    showNotification('День с этой датой уже существует', 'error');
+                    return;
+                }
+                
+                // Создаем объект для вставки
+                const dayData = {
+                    date,
+                    max_participants: maxParticipants,
+                    min_participants: minParticipants,
+                    auto_tournament: autoTournament,
+                    admin_notes: adminNotes,
+                    is_active: true,
+                    status: 'open',
+                    current_participants: 0
+                };
+                
+                // Добавляем created_by только если пользователь авторизован
+                if (currentUser) {
+                    dayData.created_by = currentUser.id;
+                }
+                
+                const { error } = await supabaseClient
+                    .from('tournament_days')
+                    .insert(dayData);
+                
+                if (error) {
+                    console.error('Ошибка Supabase:', error);
+                    throw error;
+                }
+                
+                showNotification('День успешно создан', 'success');
+                hideModal('create-day-modal');
+                document.getElementById('create-day-form').reset();
+                
+                await loadTournamentDays();
+                updateCalendar();
+                
+                if (document.getElementById('admin-panel').classList.contains('hidden')) {
+                    loadAdminData();
+                }
+                
+            } catch (error) {
+                console.error('Ошибка создания дня:', error);
+                showNotification('Ошибка при создании дня. Проверьте консоль.', 'error');
+            }
+        }
+
+        async function handleCreateTournament(e) {
+            e.preventDefault();
+            
+            const dayId = document.getElementById('tournament-date').value;
+            const name = document.getElementById('tournament-name').value;
+            const format = document.getElementById('tournament-format').value;
+            const startTime = document.getElementById('tournament-start').value;
+            const description = document.getElementById('tournament-description').value;
+            
+            if (!dayId) {
+                showNotification('Выберите дату', 'error');
+                return;
+            }
+            
+            try {
+                // Обновляем день как турнир
+                const { error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .update({
+                        is_tournament: true,
+                        status: 'confirmed',
+                        tournament_name: name
+                    })
+                    .eq('id', dayId);
+                
+                if (dayError) throw dayError;
+                
+                // Создаем турнир
+                const { error: tournamentError } = await supabaseClient
+                    .from('tournaments')
+                    .insert({
+                        tournament_day_id: dayId,
+                        name,
+                        format,
+                        start_time: startTime,
+                        description,
+                        status: 'scheduled',
+                        created_by: currentUser.id
+                    });
+                
+                if (tournamentError) throw tournamentError;
+                
+                showNotification('Турнир успешно создан', 'success');
+                hideModal('create-tournament-modal');
+                document.getElementById('create-tournament-form').reset();
+                
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Ошибка создания турнира:', error);
+                showNotification('Ошибка при создании турнира', 'error');
+            }
+        }
+
+        async function loadAdminData() {
+            const container = document.getElementById('admin-content');
+            container.innerHTML = '<div class="loading">Загрузка данных...</div>';
+            
+            try {
+                // Загружаем все дни
+                const { data: days } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .order('date', { ascending: true });
+                
+                if (!days || days.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="far fa-calendar-times"></i><h3>Нет созданных дней</h3><p>Создайте первый игровой день</p></div>';
+                    return;
+                }
+                
+                let html = '<h3>Все игровые дни</h3><div class="admin-days-list">';
+                
+                days.forEach(day => {
+                    const date = parseDate(day.date);
+                    const isPast = date < new Date();
+                    
+                    html += '<div class="registration-card ' + (isPast ? 'past' : '') + ' ' + (day.is_tournament ? 'tournament-active' : '') + '">';
+                    html += '<div class="card-header"><div class="card-date">' + formatDate(date) + '</div>';
+                    html += '<div class="card-status status-' + day.status + '">' + (day.is_tournament ? 'Турнир' : 'День игры') + '</div></div>';
+                    html += '<p>Участников: ' + day.current_participants + '/' + day.max_participants + '</p>';
+                    html += '<p>Доступных игроков: <span id="available-count-' + day.id + '">Загрузка...</span></p>';
+                    if (day.auto_tournament) html += '<p><i class="fas fa-robot"></i> Автотурнир при ' + day.min_participants + '+</p>';
+                    if (day.admin_notes) html += '<p><small>' + day.admin_notes + '</small></p>';
+                    html += '<div class="modal-actions"><button onclick="deleteDay(\'' + day.id + '\')" class="btn btn-danger"><i class="fas fa-trash"></i> Удалить</button></div>';
+                    html += '</div>';
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+                // Загружаем количество доступных игроков для каждого дня
+                days.forEach(day => {
+                    loadAvailableCountForAdmin(day.id);
+                });
+                
+            } catch (error) {
+                console.error('Ошибка загрузки админ-данных:', error);
+                container.innerHTML = '<div class="notification error">Ошибка загрузки данных</div>';
+            }
+        }
+
+        async function loadAvailableCountForAdmin(dayId) {
+            const { data: availability } = await supabaseClient
+                .from('availability')
+                .select('id')
+                .eq('tournament_day_id', dayId)
+                .eq('status', 'active');
+            
+            const count = availability ? availability.length : 0;
+            const element = document.getElementById('available-count-' + dayId);
+            if (element) {
+                element.textContent = count;
+                if (count >= 3) {
+                    element.style.color = 'var(--success-color)';
+                    element.style.fontWeight = 'bold';
+                }
+            }
+        }
+
+        async function loadAllRegistrations() {
+            const { data, error } = await supabaseClient
+                .from('registrations')
+                .select('*, profiles (username, full_name)')
+                .order('registration_date', { ascending: false });
+            
+            if (error) {
+                console.error('Ошибка загрузки записей:', error);
+                showNotification('Ошибка загрузки записей', 'error');
+                return;
+            }
+            
+            const container = document.getElementById('all-registrations-content');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="empty-state">Нет записей</div>';
+            } else {
+                // Получаем информацию о днях
+                const registrationPromises = data.map(async (reg) => {
+                    const { data: day } = await supabaseClient
+                        .from('tournament_days')
+                        .select('*')
+                        .eq('id', reg.tournament_day_id)
+                        .single();
+                    
+                    return { reg, day };
+                });
+                
+                Promise.all(registrationPromises).then(results => {
+                    let html = '';
+                    results.forEach(({ reg, day }) => {
+                        const date = day ? parseDate(day.date) : new Date(reg.registration_date);
+                        
+                        html += '<div class="registration-card">';
+                        html += '<div class="card-header"><div class="card-date">' + formatDate(date) + '</div>';
+                        html += '<div class="card-status">' + reg.status + '</div></div>';
+                        html += '<p><strong>Участник:</strong> ' + (reg.profiles.username || reg.profiles.full_name) + '</p>';
+                        html += '<p><strong>Записался:</strong> ' + new Date(reg.registration_date).toLocaleString('ru-RU') + '</p>';
+                        if (day) html += '<p><strong>Места:</strong> ' + day.current_participants + '/' + day.max_participants + '</p>';
+                        html += '</div>';
+                    });
+                    container.innerHTML = html;
+                });
+            }
+            
+            showModal('all-registrations-modal');
+        }
+
+        async function loadAllAvailability() {
+            const { data, error } = await supabaseClient
+                .from('availability')
+                .select('*, profiles (username, full_name)')
+                .order('date', { ascending: true });
+            
+            if (error) {
+                console.error('Ошибка загрузки доступности:', error);
+                showNotification('Ошибка загрузки доступности', 'error');
+                return;
+            }
+            
+            const container = document.getElementById('all-availability-content');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="empty-state">Нет данных о доступности</div>';
+            } else {
+                // Группируем по дате и tournament_day_id
+                const groupedByDay = {};
+                data.forEach(item => {
+                    const key = item.tournament_day_id || 'no-day-' + item.date;
+                    if (!groupedByDay[key]) {
+                        groupedByDay[key] = {
+                            date: item.date,
+                            dayId: item.tournament_day_id,
+                            players: []
+                        };
+                    }
+                    groupedByDay[key].players.push(item.profiles);
+                });
+                
+                // Получаем информацию о днях
+                const dayPromises = Object.values(groupedByDay).map(async (group) => {
+                    let dayInfo = null;
+                    if (group.dayId) {
+                        const { data: day } = await supabaseClient
+                            .from('tournament_days')
+                            .select('*')
+                            .eq('id', group.dayId)
+                            .single();
+                        dayInfo = day;
+                    }
+                    return { ...group, dayInfo };
+                });
+                
+                const groupsWithDays = await Promise.all(dayPromises);
+                
+                let html = '';
+                groupsWithDays.forEach(group => {
+                    const date = parseDate(group.date);
+                    const day = group.dayInfo;
+                    
+                    html += '<div class="registration-card">';
+                    html += '<div class="card-header"><div class="card-date">' + formatDate(date) + '</div>';
+                    html += '<div class="card-status">' + group.players.length + ' игроков</div></div>';
+                    
+                    if (day) {
+                        html += '<p><strong>День игры:</strong> ' + (day.tournament_name || 'Обычный день') + '</p>';
+                        html += '<p>Для турнира нужно: ' + (day.min_participants || 3) + ' из ' + (day.max_participants || 8) + '</p>';
+                        html += '<p>Автотурнир: ' + (day.auto_tournament ? 'Включен' : 'Выключен') + '</p>';
+                        html += '<p>Статус: ' + (day.is_tournament ? 'Турнир создан!' : 'Ожидание игроков') + '</p>';
+                    } else {
+                        html += '<p><em>День еще не создан администратором</em></p>';
+                    }
+                    
+                    html += '<div class="participants-list"><p><small>Свободные игроки:</small></p>';
+                    group.players.forEach(player => {
+                        html += '<div class="participant-item"><span>' + (player.username || player.full_name) + '</span></div>';
+                    });
+                    html += '</div>';
+                    
+                    if (day && !day.is_tournament && group.players.length >= (day.min_participants || 3)) {
+                        html += '<button onclick="forceCreateTournament(\'' + day.id + '\')" class="btn btn-success btn-sm"><i class="fas fa-trophy"></i> Создать турнир вручную</button>';
+                    }
+                    
+                    html += '</div>';
+                });
+                
+                container.innerHTML = html;
+            }
+            
+            showModal('all-availability-modal');
+        }
+
+        async function forceCreateTournament(dayId) {
+            if (!confirm('Создать турнир вручную?')) return;
+            
+            try {
+                // Получаем информацию о дне
+                const { data: day, error: dayError } = await supabaseClient
+                    .from('tournament_days')
+                    .select('*')
+                    .eq('id', dayId)
+                    .single();
+                
+                if (dayError || !day) {
+                    showNotification('День не найден', 'error');
+                    return;
+                }
+                
+                if (day.is_tournament) {
+                    showNotification('Турнир уже создан', 'error');
+                    return;
+                }
+                
+                // Получаем количество доступных игроков
+                const { data: availability } = await supabaseClient
+                    .from('availability')
+                    .select('user_id')
+                    .eq('tournament_day_id', dayId)
+                    .eq('status', 'active');
+                
+                const availableCount = availability ? availability.length : 0;
+                
+                // Создаем турнир
+                const { error: tournamentError } = await supabaseClient
+                    .from('tournaments')
+                    .insert({
+                        tournament_day_id: dayId,
+                        name: 'Турнир ' + formatDate(parseDate(day.date)),
+                        format: 'round-robin',
+                        status: 'scheduled'
+                    });
+                
+                if (tournamentError) throw tournamentError;
+                
+                // Помечаем день как турнир
+                await supabaseClient
+                    .from('tournament_days')
+                    .update({ 
+                        is_tournament: true,
+                        status: 'confirmed',
+                        tournament_name: 'Турнир ' + formatDate(parseDate(day.date))
+                    })
+                    .eq('id', dayId);
+                
+                showNotification('Турнир создан вручную! На ' + formatDate(parseDate(day.date)) + ' свободны ' + availableCount + ' игроков', 'success');
+                
+                // Обновляем данные
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadUpcomingTournaments()
+                ]);
+                
+                // Перезагружаем админ данные
+                loadAdminData();
+                
+                // Закрываем модалку если открыта
+                hideModal('all-availability-modal');
+                
+            } catch (error) {
+                console.error('Ошибка создания турнира вручную:', error);
+                showNotification('Ошибка при создании турнира', 'error');
+            }
+        }
+
+        async function deleteDay(dayId) {
+            if (!confirm('Удалить этот день? Все записи и турниры будут удалены.')) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('tournament_days')
+                    .delete()
+                    .eq('id', dayId);
+                
+                if (error) throw error;
+                
+                showNotification('День удален', 'success');
+                await Promise.all([
+                    loadTournamentDays(),
+                    loadMyRegistrations(),
+                    loadMyAvailability(),
+                    loadUpcomingTournaments()
+                ]);
+                updateCalendar();
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
+                showNotification('Ошибка при удалении дня', 'error');
+            }
+        }
+
+        // ============= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =============
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function hideModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function showNotification(message, type = 'info') {
+            // Удаляем старые уведомления
+            const oldNotifications = document.querySelectorAll('.notification');
+            oldNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification ' + type;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
+        }
+
+        function formatDate(date) {
+            if (!date) return 'Неизвестная дата';
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            return date.toLocaleDateString('ru-RU', options);
+        }
+
+        function formatShortDate(date) {
+            if (!date) return 'Неизвестная дата';
+            const options = { 
+                day: 'numeric',
+                month: 'short'
+            };
+            return date.toLocaleDateString('ru-RU', options);
+        }
+
+        function formatDateForStorage(date) {
+            // Формат YYYY-MM-DD для хранения - ИСПРАВЛЕННЫЙ МЕТОД
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function parseDate(dateString) {
+            // Парсим строку формата YYYY-MM-DD - ИСПРАВЛЕННЫЙ МЕТОД
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const day = parseInt(parts[2]);
+                const date = new Date(year, month, day);
+                date.setHours(0, 0, 0, 0); // Устанавливаем время в 00:00:00
+                return date;
+            }
+            const date = new Date(dateString);
+            date.setHours(0, 0, 0, 0);
+            return date;
+        }
+
+        function isSameDate(date1, date2) {
+            return date1.getFullYear() === date2.getFullYear() &&
+                   date1.getMonth() === date2.getMonth() &&
+                   date1.getDate() === date2.getDate();
+        }
+
+        function getTournamentFormat(format) {
+            const formats = {
+                'round-robin': 'Круговая система',
+                'elimination': 'Олимпийская система',
+                'groups': 'Группы + плей-офф'
+            };
+            return formats[format] || format;
+        }
+
+        // Экспортируем функции для использования в HTML
+        window.showModal = showModal;
+        window.hideModal = hideModal;
+        window.logout = logout;
+        window.changeMonth = changeMonth;
+        window.showDayDetails = showDayDetails;
+        window.registerForDay = registerForDay;
+        window.cancelRegistration = cancelRegistration;
+        window.cancelSpecificRegistration = cancelSpecificRegistration;
+        window.showAdminPanel = showAdminPanel;
+        window.hideAdminPanel = hideAdminPanel;
+        window.loadAllRegistrations = loadAllRegistrations;
+        window.loadAllAvailability = loadAllAvailability;
+        window.toggleMultiSelectMode = toggleMultiSelectMode;
+        window.removeSelectedDate = removeSelectedDate;
+        window.saveMultipleRegistrations = saveMultipleRegistrations;
+        window.cancelMultiSelect = cancelMultiSelect;
+        window.removeAvailability = removeAvailability;
+        window.forceCheckTournaments = forceCheckTournaments;
+        window.forceCreateTournament = forceCreateTournament;
+        window.deleteDay = deleteDay;
+    </script>
+</body>
+</html>
