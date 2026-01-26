@@ -582,54 +582,82 @@ async function login() {
         return;
     }
 
-    // Ищем пользователя по логину
-    const { data: user, error } = await supabaseClient
-        .from('pingpong_users')
-        .select('*')
-        .eq('username', username)
-        .single();
+    try {
+        // ИСПОЛЬЗУЕМ ilike ДЛЯ КОРРЕКТНОГО ПОИСКА
+        const { data: user, error } = await supabaseClient
+            .from('pingpong_users')
+            .select('*')
+            .ilike('username', username)  // ← ВАЖНО: используем ilike вместо eq
+            .single();
 
-    if (error || !user) {
-        showMessage('Пользователь не найден', 'error');
-        return;
-    }
+        if (error || !user) {
+            showMessage('Пользователь не найден', 'error');
+            return;
+        }
 
-    // ПРОВЕРЯЕМ ПАРОЛЬ (теперь без crypt!)
-    if (user.password_hash === password) {
-        setCurrentUser(user);
-        showMessage(`Добро пожаловать, ${user.username}!`);
-    } else {
-        showMessage('Неверный пароль', 'error');
+        // ПРОВЕРЯЕМ ПАРОЛЬ (простая проверка без crypt)
+        if (user.password_hash === password) {
+            setCurrentUser(user);
+            showMessage(`Добро пожаловать, ${user.username}!`);
+        } else {
+            showMessage('Неверный пароль', 'error');
+        }
+    } catch (error) {
+        console.error('Ошибка входа:', error);
+        showMessage('Ошибка при входе в систему', 'error');
     }
 }
 
-            async function register() {
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
+async function register() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
 
-                if (!username || !password) {
-                    showMessage('Введите логин и пароль', 'error');
-                    return;
-                }
+    if (!username || !password) {
+        showMessage('Введите логин и пароль', 'error');
+        return;
+    }
 
-                if (password.length < 4) {
-                    showMessage('Пароль должен быть минимум 4 символа', 'error');
-                    return;
-                }
+    if (password.length < 4) {
+        showMessage('Пароль должен быть минимум 4 символа', 'error');
+        return;
+    }
 
-                const { data, error } = await sb
-                    .from('pingpong_users')
-                    .insert([{
-                        username: username,
-                        password_hash: password
-                    }])
-                    .select()
-                    .single();
+    try {
+        // ПРОВЕРЯЕМ, НЕТ ЛИ ТАКОГО ПОЛЬЗОВАТЕЛЯ
+        const { data: existingUser } = await supabaseClient
+            .from('pingpong_users')
+            .select('username')
+            .ilike('username', username)
+            .single();
 
-                if (error) {
-                    showMessage('Ошибка регистрации: ' + error.message, 'error');
-                    return;
-                }
+        if (existingUser) {
+            showMessage('Пользователь с таким логином уже существует', 'error');
+            return;
+        }
+
+        // СОЗДАЕМ НОВОГО ПОЛЬЗОВАТЕЛЯ
+        const { data, error } = await supabaseClient
+            .from('pingpong_users')
+            .insert([{
+                username: username,
+                password_hash: password
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Ошибка регистрации:', error);
+            showMessage('Ошибка регистрации: ' + error.message, 'error');
+            return;
+        }
+
+        showMessage('Регистрация успешна!');
+        setCurrentUser(data);
+    } catch (error) {
+        console.error('Ошибка регистрации:', error);
+        showMessage('Ошибка при регистрации', 'error');
+    }
+}
 
                 showMessage('Регистрация успешна!');
                 setCurrentUser(data);
