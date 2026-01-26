@@ -398,10 +398,6 @@
             margin-bottom: 20px;
         }
 
-        .admin-day-form h3 {
-            margin-bottom: 15px;
-        }
-
         .form-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -772,8 +768,8 @@
 
     <script>
         // ============= КОНФИГУРАЦИЯ =============
-        const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'; // ЗАМЕНИТЕ НА ВАШ URL
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'; // ЗАМЕНИТЕ НА ВАШ КЛЮЧ
+        const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE';
 
         // Инициализация Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1586,7 +1582,7 @@
                             <i class="far fa-calendar-times"></i>
                             <h3>Нет созданных дней</h3>
                             <p>Создайте первый игровой день</p>
-                        </div>
+                    </div>
                     `;
                     return;
                 }
