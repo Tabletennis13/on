@@ -1711,9 +1711,21 @@
                 return;
             }
             
-            container.innerHTML = tournaments.map(day => {
-                if (!day.is_active) return '';
-                
+            // Сначала отфильтруем дни, которые не активны
+            const activeTournaments = tournaments.filter(day => day.is_active);
+            
+            if (activeTournaments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <h3>Нет активных турниров</h3>
+                        <p>Турниры появятся здесь, когда наберется минимальное количество участников</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = activeTournaments.map(day => {
                 const date = parseDate(day.date);
                 const isTournament = day.is_tournament;
                 const hasTournament = day.tournaments && day.tournaments.length > 0;
@@ -1728,15 +1740,15 @@
                         </div>
                         
                         ${hasTournament && day.tournaments[0].name ? 
-                            `<h4>${day.tournaments[0].name}</h4>` : 
-                            `<h4>${isTournament ? 'Турнир' : 'Игровой день'}</h4>`}
+                            '<h4>' + day.tournaments[0].name + '</h4>' : 
+                            '<h4>' + (isTournament ? 'Турнир' : 'Игровой день') + '</h4>'}
                         
                         <p>Участников: <strong>${day.current_participants}/${day.max_participants}</strong></p>
                         
                         ${day.auto_tournament ? 
-                            `<p><i class="fas fa-robot"></i> Турнир создастся при ${day.min_participants}+ участниках</p>` : ''}
+                            '<p><i class="fas fa-robot"></i> Турнир создастся при ' + day.min_participants + '+ участниках</p>' : ''}
                         
-                        ${day.admin_notes ? `<p><small>${day.admin_notes}</small></p>` : ''}
+                        ${day.admin_notes ? '<p><small>' + day.admin_notes + '</small></p>' : ''}
                         
                         <div class="participants-list">
                             <p><small><i class="fas fa-users"></i> Список участников:</small></p>
@@ -1746,15 +1758,14 @@
                         </div>
                         
                         ${!isTournament ? 
-                            `<button onclick="showDayDetails('${day.date}')" class="btn btn-primary">
-                                <i class="fas fa-info-circle"></i> Подробнее
-                            </button>` : ''}
+                            '<button onclick="showDayDetails(\'' + day.date + '\')" class="btn btn-primary">' +
+                            '<i class="fas fa-info-circle"></i> Подробнее</button>' : ''}
                     </div>
                 `;
             }).join('');
             
             // Загружаем участников для каждого дня
-            tournaments.forEach(day => {
+            activeTournaments.forEach(day => {
                 loadParticipantsForDay(day.id);
             });
         }
@@ -2515,9 +2526,8 @@
                                 `).join('')}
                             </div>
                             ${day && !day.is_tournament && group.players.length >= (day.min_participants || 3) ? 
-                                `<button onclick="forceCreateTournament('${day.id}')" class="btn btn-success btn-sm">
-                                    <i class="fas fa-trophy"></i> Создать турнир вручную
-                                </button>` : ''}
+                                '<button onclick="forceCreateTournament(\'' + day.id + '\')" class="btn btn-success btn-sm">' +
+                                '<i class="fas fa-trophy"></i> Создать турнир вручную</button>' : ''}
                         </div>
                     `;
                 }).join('');
