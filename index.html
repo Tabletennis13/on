@@ -689,6 +689,9 @@
                 <button onclick="forceCheckTournaments()" class="btn btn-warning">
                     <i class="fas fa-sync"></i> Проверить турниры
                 </button>
+                <button onclick="hideAdminPanel()" class="btn btn-danger">
+                    <i class="fas fa-arrow-left"></i> Назад
+                </button>
             </div>
 
             <div id="admin-content">
@@ -1162,7 +1165,7 @@
                 calendar.appendChild(emptyCell);
             }
             
-            // Дни месяца
+            // Дни месяца - ИСПРАВЛЕННАЯ ЧАСТЬ ДЛЯ КОРРЕКТНОЙ РАБОТЫ С ДАТАМИ
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -1171,18 +1174,21 @@
             
             for (let day = 1; day <= totalDays; day++) {
                 const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                dayDate.setHours(0, 0, 0, 0); // Устанавливаем время в 00:00:00
+                
                 const dateString = formatDateForStorage(dayDate);
                 
                 const dayCell = document.createElement('div');
                 dayCell.className = 'day-cell';
                 dayCell.dataset.date = dateString;
+                dayCell.dataset.day = day;
                 
-                // Проверяем, сегодня ли это
-                if (isSameDate(dayDate, today)) {
+                // Проверяем, сегодня ли это - ИСПРАВЛЕНО СРАВНЕНИЕ
+                if (dayDate.getTime() === today.getTime()) {
                     dayCell.classList.add('today');
                 }
                 
-                // Проверяем, прошедшая ли это дата
+                // Проверяем, прошедшая ли это дата - ИСПРАВЛЕНО СРАВНЕНИЕ
                 if (dayDate < today) {
                     dayCell.classList.add('past');
                 }
@@ -1230,14 +1236,16 @@
                     dayCell.innerHTML = '<div class="day-number">' + day + '</div><div class="day-info">Нет записи</div>';
                 }
                 
-                // ВАЖНО: Исправленный обработчик клика
+                // Обработчик клика
                 if (!dayCell.classList.contains('past')) {
                     dayCell.style.cursor = 'pointer';
                     
-                    // Обработчик клика - исправленная версия
                     dayCell.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const clickedDateStr = dayCell.dataset.date;
+                        const clickedDay = dayCell.dataset.day;
+                        
+                        console.log('Клик по дате:', clickedDateStr, 'День:', clickedDay);
                         handleDayCellClick(clickedDateStr, tournamentDay);
                     });
                 } else {
@@ -1249,6 +1257,8 @@
         }
 
         function handleDayCellClick(dateString, tournamentDay) {
+            console.log('Обработка клика:', dateString);
+            
             // Если включен режим мультивыбора
             if (isMultiSelectMode) {
                 toggleDateSelection(dateString, tournamentDay);
@@ -1753,6 +1763,8 @@
 
         // ============= РАБОТА С ДНЯМИ =============
         async function showDayDetails(dateString) {
+            console.log('Показать детали дня:', dateString);
+            
             if (!currentUser) {
                 showNotification('Сначала войдите в систему', 'error');
                 showModal('login-modal');
@@ -2586,17 +2598,27 @@
         }
 
         function formatDateForStorage(date) {
-            // Формат YYYY-MM-DD для хранения
-            return date.toISOString().split('T')[0];
+            // Формат YYYY-MM-DD для хранения - ИСПРАВЛЕННЫЙ МЕТОД
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
         function parseDate(dateString) {
-            // Парсим строку формата YYYY-MM-DD
+            // Парсим строку формата YYYY-MM-DD - ИСПРАВЛЕННЫЙ МЕТОД
             const parts = dateString.split('-');
             if (parts.length === 3) {
-                return new Date(parts[0], parts[1] - 1, parts[2]);
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const day = parseInt(parts[2]);
+                const date = new Date(year, month, day);
+                date.setHours(0, 0, 0, 0); // Устанавливаем время в 00:00:00
+                return date;
             }
-            return new Date(dateString);
+            const date = new Date(dateString);
+            date.setHours(0, 0, 0, 0);
+            return date;
         }
 
         function isSameDate(date1, date2) {
@@ -2624,6 +2646,7 @@
         window.cancelRegistration = cancelRegistration;
         window.cancelSpecificRegistration = cancelSpecificRegistration;
         window.showAdminPanel = showAdminPanel;
+        window.hideAdminPanel = hideAdminPanel;
         window.loadAllRegistrations = loadAllRegistrations;
         window.loadAllAvailability = loadAllAvailability;
         window.toggleMultiSelectMode = toggleMultiSelectMode;
