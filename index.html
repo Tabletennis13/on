@@ -149,19 +149,18 @@ button:hover { transform: scale(1.05); }
   outline: none;
   border-color: #0ea5e9;
 }
-.month-nav {
-  display: flex;
-  gap: 5px;
-}
-.month-nav button {
-  background: #38bdf8;
+.month-selector input {
+  background: rgba(56, 189, 248, 0.2);
   color: white;
-  border: none;
+  border: 2px solid #38bdf8;
   padding: 8px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  min-width: 80px;
+  border-radius: 8px;
+  font-size: 16px;
+  width: 100px;
+}
+.month-selector input:focus {
+  outline: none;
+  border-color: #0ea5e9;
 }
 
 .calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:10px; }
@@ -228,12 +227,6 @@ button:hover { transform: scale(1.05); }
   background: rgba(34, 197, 94, 0.1);
   border-radius: 8px;
   border: 1px solid #22c55e;
-}
-
-.current-month {
-  font-size: 1.2em;
-  color: #38bdf8;
-  font-weight: bold;
 }
 </style>
 </head>
@@ -313,11 +306,7 @@ button:hover { transform: scale(1.05); }
       <option value="10">Ноябрь</option>
       <option value="11">Декабрь</option>
     </select>
-    <input id="yearSelect" type="number" value="2024" min="2024" max="2030" style="width: 100px;">
-  </div>
-  <div class="month-nav">
-    <button onclick="prevMonth()">◀ Назад</button>
-    <button onclick="nextMonth()">Вперёд ▶</button>
+    <input id="yearSelect" type="number" value="2024" min="2024" max="2030">
   </div>
 </div>
 
@@ -542,17 +531,6 @@ function buildCalendar(){
     }
     calendarDiv.appendChild(day);
   }
-}
-
-// --- Навигация по месяцам ---
-function prevMonth() {
-  currentDate.setMonth(currentDate.getMonth() - 1);
-  buildCalendar();
-}
-
-function nextMonth() {
-  currentDate.setMonth(currentDate.getMonth() + 1);
-  buildCalendar();
 }
 
 // --- Изменение месяца через селект ---
