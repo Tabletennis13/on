@@ -106,9 +106,20 @@ let choices = []
 let tournaments = []
 let current = new Date()
 
-async function auth(){
-  const loginVal = login.value
-  const passVal = password.value
+// DOM элементы
+const authDiv = document.getElementById('auth')
+const appDiv = document.getElementById('app')
+const calendar = document.getElementById('calendar')
+const monthTitle = document.getElementById('monthTitle')
+const adminDiv = document.getElementById('admin')
+const tournamentsDiv = document.getElementById('tournaments')
+const loginInput = document.getElementById('login')
+const passwordInput = document.getElementById('password')
+
+// Авторизация / регистрация
+async function auth() {
+  const loginVal = loginInput.value
+  const passVal = passwordInput.value
 
   let { data } = await db.from('pp_users')
     .select('*')
@@ -122,25 +133,28 @@ async function auth(){
   }
 
   user = data
-  auth.style.display = 'none'
-  app.style.display = 'block'
-  if (user.is_admin) admin.style.display = 'block'
+  authDiv.style.display = 'none'
+  appDiv.style.display = 'block'
+  if (user.is_admin) adminDiv.style.display = 'block'
   load()
 }
 
-async function load(){
+// Загрузка данных
+async function load() {
   choices = (await db.from('pp_date_choices').select('*')).data || []
   tournaments = (await db.from('pp_tournaments').select('*')).data || []
-  render()
+  renderCalendar()
   renderAdmin()
 }
 
-function changeMonth(n){
+// Смена месяца
+function changeMonth(n) {
   current.setMonth(current.getMonth() + n)
-  render()
+  renderCalendar()
 }
 
-function render(){
+// Рендер календаря
+function renderCalendar() {
   calendar.innerHTML = ''
   monthTitle.innerText = current.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})
 
@@ -158,13 +172,14 @@ function render(){
     if (choices.some(c=>c.play_date===date)) div.classList.add('chosen')
     if (tournaments.some(t=>t.play_date===date)) div.classList.add('tournament')
     div.innerText = d
-    div.onclick = () => toggle(date)
+    div.onclick = () => toggleDate(date)
     calendar.appendChild(div)
   }
 }
 
-async function toggle(date){
-  const exists = choices.find(c=>c.play_date===date && c.user_id===user.id)
+// Выбор/снятие даты
+async function toggleDate(date) {
+  const exists = choices.find(c => c.play_date === date && c.user_id === user.id)
 
   if (exists) {
     await db.from('pp_date_choices').delete().eq('id', exists.id)
@@ -174,35 +189,34 @@ async function toggle(date){
   await db.from('pp_date_choices').insert({ user_id: user.id, play_date: date })
 
   const users = [...new Set(
-    choices.filter(c=>c.play_date===date).map(c=>c.user_id).concat(user.id)
+    choices.filter(c => c.play_date === date).map(c => c.user_id).concat(user.id)
   )]
 
-  if (users.length >= 3 && !tournaments.find(t=>t.play_date===date)) {
+  if (users.length >= 3 && !tournaments.find(t => t.play_date === date)) {
     const { data:t } = await db.from('pp_tournaments')
       .insert({ play_date: date, title: 'Турнир ' + date })
       .select().single()
 
     await db.from('pp_tournament_players')
-      .insert(users.map(u=>({ tournament_id: t.id, user_id: u })))
+      .insert(users.map(u => ({ tournament_id: t.id, user_id: u })))
   }
 
   load()
 }
 
-function renderAdmin(){
+// Рендер админ-панели
+function renderAdmin() {
   tournamentsDiv.innerHTML = ''
-  tournaments.forEach(t=>{
-    const i = document.createElement('input')
-    i.value = t.title
-    i.onchange = () =>
-      db.from('pp_tournaments').update({ title: i.value }).eq('id', t.id)
+  tournaments.forEach(t => {
+    const input = document.createElement('input')
+    input.value = t.title
+    input.onchange = () => db.from('pp_tournaments').update({ title: input.value }).eq('id', t.id)
 
-    const b = document.createElement('button')
-    b.innerText = 'Удалить'
-    b.onclick = () =>
-      db.from('pp_tournaments').delete().eq('id', t.id).then(load)
+    const btn = document.createElement('button')
+    btn.innerText = 'Удалить'
+    btn.onclick = () => db.from('pp_tournaments').delete().eq('id', t.id).then(load)
 
-    tournamentsDiv.append(i,b)
+    tournamentsDiv.append(input, btn)
   })
 }
 </script>
