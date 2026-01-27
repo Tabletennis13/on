@@ -154,15 +154,18 @@
         }
 
         .selected-date {
-            background: #4CAF50;
+            background: #4CAF50 !important;
+            color: white !important;
         }
 
         .tournament-date {
-            background: #FF9800;
+            background: #FF9800 !important;
+            color: white !important;
         }
 
         .popular-date {
-            background: #2196F3;
+            background: #2196F3 !important;
+            color: white !important;
         }
 
         .admin-panel {
@@ -296,9 +299,9 @@
             <div class="auth-form">
                 <input type="text" id="login" placeholder="Логин">
                 <input type="password" id="password" placeholder="Пароль">
-                <button onclick="login()">Войти</button>
-                <button onclick="register()" style="background: #4CAF50;">Регистрация</button>
-                <button onclick="logout()" style="background: #f44336; display: none;" id="logoutBtn">Выйти</button>
+                <button onclick="loginUser()">Войти</button>
+                <button onclick="registerUser()" style="background: #4CAF50;">Регистрация</button>
+                <button onclick="logoutUser()" style="background: #f44336; display: none;" id="logoutBtn">Выйти</button>
             </div>
         </div>
 
@@ -353,17 +356,18 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
     
     <script>
-        // Конфигурация Supabase
-        const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE';
-
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Инициализация Supabase один раз
+        const supabaseClient = window.supabase.createClient(
+            'https://bqycjfcjtdawyrysgrbw.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
+        );
 
         // Переменные состояния
         let currentUser = null;
         let selectedDates = [];
         let tournaments = [];
         let userSelections = [];
+        let calendarInstance = null;
 
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
@@ -390,8 +394,8 @@
             
             if (currentUser) {
                 usernameEl.textContent = currentUser.username;
-                logoutBtn.style.display = 'block';
-                saveDatesBtn.style.display = 'block';
+                logoutBtn.style.display = 'inline-block';
+                saveDatesBtn.style.display = 'inline-block';
                 
                 if (currentUser.username === 'Admin') {
                     adminPanel.style.display = 'block';
@@ -405,7 +409,7 @@
         }
 
         // Вход в систему
-        async function login() {
+        async function loginUser() {
             const login = document.getElementById('login').value;
             const password = document.getElementById('password').value;
             
@@ -420,30 +424,36 @@
                 localStorage.setItem('pingpong_user', JSON.stringify(currentUser));
                 updateUIForUser();
                 alert('Добро пожаловать, Admin!');
+                loadUserDates();
                 return;
             }
             
             // Проверка обычных пользователей
-            const { data: users } = await supabase
-                .from('pingpong_users')
-                .select('*')
-                .eq('username', login)
-                .eq('password', password)
-                .single();
-            
-            if (users) {
-                currentUser = users;
-                localStorage.setItem('pingpong_user', JSON.stringify(currentUser));
-                updateUIForUser();
-                alert('Вход выполнен успешно!');
-                loadUserSelections();
-            } else {
+            try {
+                const { data: users, error } = await supabaseClient
+                    .from('pingpong_users')
+                    .select('*')
+                    .eq('username', login)
+                    .eq('password', password)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (users) {
+                    currentUser = users;
+                    localStorage.setItem('pingpong_user', JSON.stringify(currentUser));
+                    updateUIForUser();
+                    alert('Вход выполнен успешно!');
+                    loadUserDates();
+                }
+            } catch (error) {
+                console.error('Login error:', error);
                 alert('Неверный логин или пароль');
             }
         }
 
         // Регистрация
-        async function register() {
+        async function registerUser() {
             const login = document.getElementById('login').value;
             const password = document.getElementById('password').value;
             
@@ -452,47 +462,59 @@
                 return;
             }
             
-            // Проверка существующего пользователя
-            const { data: existingUser } = await supabase
-                .from('pingpong_users')
-                .select('*')
-                .eq('username', login)
-                .single();
-            
-            if (existingUser) {
-                alert('Пользователь с таким логином уже существует');
+            if (password.length < 3) {
+                alert('Пароль должен содержать минимум 3 символа');
                 return;
             }
             
-            // Создание нового пользователя
-            const { data, error } = await supabase
-                .from('pingpong_users')
-                .insert([{ username: login, password: password }])
-                .select()
-                .single();
-            
-            if (!error) {
+            try {
+                // Проверка существующего пользователя
+                const { data: existingUser, error: checkError } = await supabaseClient
+                    .from('pingpong_users')
+                    .select('*')
+                    .eq('username', login)
+                    .single();
+                
+                if (existingUser && !checkError) {
+                    alert('Пользователь с таким логином уже существует');
+                    return;
+                }
+                
+                // Создание нового пользователя
+                const { data, error } = await supabaseClient
+                    .from('pingpong_users')
+                    .insert([{ 
+                        username: login, 
+                        password: password 
+                    }])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
                 currentUser = data;
                 localStorage.setItem('pingpong_user', JSON.stringify(currentUser));
                 updateUIForUser();
                 alert('Регистрация успешна!');
-            } else {
+            } catch (error) {
+                console.error('Registration error:', error);
                 alert('Ошибка регистрации: ' + error.message);
             }
         }
 
         // Выход из системы
-        function logout() {
+        function logoutUser() {
             currentUser = null;
             localStorage.removeItem('pingpong_user');
             updateUIForUser();
             selectedDates = [];
             updateSelectedDatesList();
+            calendarInstance.clear();
         }
 
         // Инициализация календаря
         function initCalendar() {
-            const calendar = flatpickr("#calendar", {
+            calendarInstance = flatpickr("#calendar", {
                 inline: true,
                 mode: "multiple",
                 dateFormat: "Y-m-d",
@@ -503,34 +525,47 @@
                     if (currentUser) {
                         selectedDates = selectedDates.map(date => date.toISOString().split('T')[0]);
                         updateSelectedDatesList();
+                        refreshCalendar();
                     } else {
                         alert('Пожалуйста, войдите в систему чтобы выбирать даты');
                         instance.clear();
                     }
-                },
-                onDayCreate: function(dObj, dStr, fp, dayElem) {
-                    const dateStr = dayElem.dateObj.toISOString().split('T')[0];
+                }
+            });
+        }
+
+        // Обновление стилей календаря
+        function refreshCalendar() {
+            if (!calendarInstance) return;
+            
+            setTimeout(() => {
+                const days = document.querySelectorAll('.flatpickr-day');
+                days.forEach(day => {
+                    const dateStr = day.dateObj.toISOString().split('T')[0];
+                    
+                    // Сброс стилей
+                    day.classList.remove('selected-date', 'tournament-date', 'popular-date');
                     
                     // Проверка выбранных дат текущим пользователем
                     if (selectedDates.includes(dateStr)) {
-                        dayElem.classList.add('selected-date');
+                        day.classList.add('selected-date');
                     }
                     
                     // Проверка турниров
                     const tournament = tournaments.find(t => t.date === dateStr);
                     if (tournament) {
-                        dayElem.classList.add('tournament-date');
-                        dayElem.title = `Турнир: ${tournament.name}`;
+                        day.classList.add('tournament-date');
+                        day.title = `Турнир: ${tournament.name}`;
                     }
                     
                     // Проверка популярных дат
                     const dateSelections = userSelections.filter(s => s.date === dateStr);
                     if (dateSelections.length >= 3) {
-                        dayElem.classList.add('popular-date');
-                        dayElem.title = `Эту дату выбрали ${dateSelections.length} человек`;
+                        day.classList.add('popular-date');
+                        day.title = `Эту дату выбрали ${dateSelections.length} человек`;
                     }
-                }
-            });
+                });
+            }, 100);
         }
 
         // Обновление списка выбранных дат
@@ -548,46 +583,56 @@
                 listEl.appendChild(dateChip);
             });
             
-            // Обновляем календарь
-            const calendar = document.querySelector('.flatpickr-calendar');
-            if (calendar) {
-                calendar.querySelectorAll('.flatpickr-day').forEach(day => {
-                    day.classList.remove('selected-date');
-                });
-            }
+            refreshCalendar();
         }
 
         // Удаление даты из выбранных
         function removeDate(date) {
             selectedDates = selectedDates.filter(d => d !== date);
             updateSelectedDatesList();
+            
+            // Обновляем выбор в календаре
+            if (calendarInstance) {
+                const newDates = selectedDates.map(d => new Date(d));
+                calendarInstance.setDate(newDates, true);
+            }
         }
 
         // Сохранение выбранных дат
         async function saveSelectedDates() {
             if (!currentUser) return;
             
-            // Удаляем старые выборы пользователя
-            await supabase
-                .from('pingpong_user_selections')
-                .delete()
-                .eq('user_id', currentUser.id);
+            if (selectedDates.length === 0) {
+                alert('Выберите хотя бы одну дату');
+                return;
+            }
             
-            // Сохраняем новые выборы
-            const selections = selectedDates.map(date => ({
-                user_id: currentUser.id,
-                date: date,
-                username: currentUser.username
-            }));
-            
-            const { error } = await supabase
-                .from('pingpong_user_selections')
-                .insert(selections);
-            
-            if (!error) {
+            try {
+                // Удаляем старые выборы пользователя
+                const { error: deleteError } = await supabaseClient
+                    .from('pingpong_user_selections')
+                    .delete()
+                    .eq('user_id', currentUser.id);
+                
+                if (deleteError) throw deleteError;
+                
+                // Сохраняем новые выборы
+                const selections = selectedDates.map(date => ({
+                    user_id: currentUser.id,
+                    date: date,
+                    username: currentUser.username
+                }));
+                
+                const { error: insertError } = await supabaseClient
+                    .from('pingpong_user_selections')
+                    .insert(selections);
+                
+                if (insertError) throw insertError;
+                
                 alert('Даты сохранены успешно!');
                 loadUserSelections();
-            } else {
+            } catch (error) {
+                console.error('Save error:', error);
                 alert('Ошибка сохранения: ' + error.message);
             }
         }
@@ -598,47 +643,67 @@
                 loadTournaments(),
                 loadUserSelections()
             ]);
-            
-            if (currentUser) {
-                loadUserDates();
-            }
         }
 
         // Загрузка турниров
         async function loadTournaments() {
-            const { data, error } = await supabase
-                .from('pingpong_tournaments')
-                .select('*')
-                .order('date', { ascending: true });
-            
-            if (!error) {
-                tournaments = data;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('pingpong_tournaments')
+                    .select('*')
+                    .order('date', { ascending: true });
+                
+                if (error) throw error;
+                
+                tournaments = data || [];
                 updateTournamentsList();
+                refreshCalendar();
+            } catch (error) {
+                console.error('Load tournaments error:', error);
             }
         }
 
         // Загрузка выборов пользователей
         async function loadUserSelections() {
-            const { data, error } = await supabase
-                .from('pingpong_user_selections')
-                .select('*');
-            
-            if (!error) {
-                userSelections = data;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('pingpong_user_selections')
+                    .select('*');
+                
+                if (error) throw error;
+                
+                userSelections = data || [];
                 checkForAutoTournaments();
+                refreshCalendar();
+            } catch (error) {
+                console.error('Load selections error:', error);
             }
         }
 
         // Загрузка дат текущего пользователя
         async function loadUserDates() {
-            const { data, error } = await supabase
-                .from('pingpong_user_selections')
-                .select('date')
-                .eq('user_id', currentUser.id);
+            if (!currentUser) return;
             
-            if (!error && data) {
-                selectedDates = data.map(item => item.date);
-                updateSelectedDatesList();
+            try {
+                const { data, error } = await supabaseClient
+                    .from('pingpong_user_selections')
+                    .select('date')
+                    .eq('user_id', currentUser.id);
+                
+                if (error) throw error;
+                
+                if (data) {
+                    selectedDates = data.map(item => item.date);
+                    updateSelectedDatesList();
+                    
+                    // Устанавливаем даты в календарь
+                    if (calendarInstance && selectedDates.length > 0) {
+                        const dateObjects = selectedDates.map(d => new Date(d));
+                        calendarInstance.setDate(dateObjects, true);
+                    }
+                }
+            } catch (error) {
+                console.error('Load user dates error:', error);
             }
         }
 
@@ -650,7 +715,9 @@
                 if (!dateGroups[selection.date]) {
                     dateGroups[selection.date] = [];
                 }
-                dateGroups[selection.date].push(selection.user_id);
+                if (!dateGroups[selection.date].includes(selection.user_id)) {
+                    dateGroups[selection.date].push(selection.user_id);
+                }
             });
             
             // Проверяем каждую дату
@@ -668,20 +735,25 @@
 
         // Создание автоматического турнира
         async function createAutoTournament(date, participantsCount) {
-            const tournamentName = `Авто-турнир ${date} (${participantsCount} участников)`;
-            
-            const { error } = await supabase
-                .from('pingpong_tournaments')
-                .insert([{
-                    name: tournamentName,
-                    date: date,
-                    is_auto: true,
-                    status: 'planned'
-                }]);
-            
-            if (!error) {
+            try {
+                const tournamentName = `Авто-турнир ${date} (${participantsCount} участников)`;
+                
+                const { error } = await supabaseClient
+                    .from('pingpong_tournaments')
+                    .insert([{
+                        name: tournamentName,
+                        date: date,
+                        is_auto: true,
+                        status: 'planned',
+                        created_by: 1
+                    }]);
+                
+                if (error) throw error;
+                
                 loadTournaments();
-                alert(`Автоматически создан турнир на ${date}!`);
+                console.log(`Автоматически создан турнир на ${date}!`);
+            } catch (error) {
+                console.error('Auto tournament creation error:', error);
             }
         }
 
@@ -690,7 +762,17 @@
             const listEl = document.getElementById('tournamentsList');
             listEl.innerHTML = '';
             
-            tournaments.slice(0, 10).forEach(tournament => {
+            const today = new Date().toISOString().split('T')[0];
+            const upcomingTournaments = tournaments
+                .filter(t => t.date >= today)
+                .slice(0, 10);
+            
+            if (upcomingTournaments.length === 0) {
+                listEl.innerHTML = '<p>Нет предстоящих турниров</p>';
+                return;
+            }
+            
+            upcomingTournaments.forEach(tournament => {
                 const tournamentEl = document.createElement('div');
                 tournamentEl.className = 'tournament-item';
                 tournamentEl.innerHTML = `
@@ -722,21 +804,25 @@
                 return;
             }
             
-            const { error } = await supabase
-                .from('pingpong_tournaments')
-                .insert([{
-                    name: name,
-                    date: date,
-                    is_auto: false,
-                    status: 'planned'
-                }]);
-            
-            if (!error) {
+            try {
+                const { error } = await supabaseClient
+                    .from('pingpong_tournaments')
+                    .insert([{
+                        name: name,
+                        date: date,
+                        is_auto: false,
+                        status: 'planned',
+                        created_by: currentUser.id
+                    }]);
+                
+                if (error) throw error;
+                
                 alert('Турнир создан успешно!');
                 document.getElementById('tournamentName').value = '';
                 document.getElementById('tournamentDate').value = '';
                 loadTournaments();
-            } else {
+            } catch (error) {
+                console.error('Create tournament error:', error);
                 alert('Ошибка создания: ' + error.message);
             }
         }
@@ -755,16 +841,21 @@
                 return;
             }
             
-            const { error } = await supabase
-                .from('pingpong_tournaments')
-                .delete()
-                .eq('date', date);
+            if (!confirm(`Удалить турнир на ${date}?`)) return;
             
-            if (!error) {
+            try {
+                const { error } = await supabaseClient
+                    .from('pingpong_tournaments')
+                    .delete()
+                    .eq('date', date);
+                
+                if (error) throw error;
+                
                 alert('Турнир удален успешно!');
                 document.getElementById('tournamentDate').value = '';
                 loadTournaments();
-            } else {
+            } catch (error) {
+                console.error('Delete tournament error:', error);
                 alert('Ошибка удаления: ' + error.message);
             }
         }
