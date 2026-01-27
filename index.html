@@ -88,14 +88,91 @@ button:hover { transform: scale(1.05); }
   flex: 1;
 }
 
-.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:20px; }
-.day { padding:10px; border-radius:8px; cursor:pointer; transition:0.2s; position:relative; }
+/* Обновленные стили для полей ввода */
+.login-form {
+  background: rgba(56, 189, 248, 0.1);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  border: 2px solid #38bdf8;
+}
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.input-group input {
+  background: rgba(56, 189, 248, 0.15);
+  border: 2px solid #38bdf8;
+  color: white;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+.input-group input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  background: rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+.input-group input::placeholder {
+  color: #94a3b8;
+}
+
+.calendar-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: rgba(56, 189, 248, 0.1);
+  border-radius: 10px;
+  border: 1px solid #38bdf8;
+}
+.month-selector {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.month-selector select {
+  background: rgba(56, 189, 248, 0.2);
+  color: white;
+  border: 2px solid #38bdf8;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  min-width: 180px;
+}
+.month-selector select:focus {
+  outline: none;
+  border-color: #0ea5e9;
+}
+.month-nav {
+  display: flex;
+  gap: 5px;
+}
+.month-nav button {
+  background: #38bdf8;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:10px; }
+.day { padding:10px; border-radius:8px; cursor:pointer; transition:0.2s; position:relative; background: rgba(148, 163, 184, 0.1); }
+.day:hover { background: rgba(56, 189, 248, 0.2); transform: scale(1.05); }
 .day.selected { background:#22c55e; color:black; }
 .day.tournament { background:#facc15; color:black; font-weight:bold; }
 .day.tournament::after { content: "🏓"; position:absolute; top:2px; right:2px; font-size:10px; }
 
-.success { color:#22c55e; font-weight:bold; margin-top:10px; }
-.error { color:#f87171; font-weight:bold; margin-top:10px; }
+.success { color:#22c55e; font-weight:bold; margin-top:10px; padding: 10px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid #22c55e; }
+.error { color:#f87171; font-weight:bold; margin-top:10px; padding: 10px; background: rgba(248, 113, 113, 0.1); border-radius: 8px; border: 1px solid #f87171; }
 
 .admin-panel { margin-top:20px; border:1px solid #38bdf8; padding:10px; border-radius:8px; }
 .tournament-item { background:#1e293b; margin:5px 0; padding:5px 8px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; }
@@ -119,6 +196,9 @@ button:hover { transform: scale(1.05); }
   align-items: center;
   gap: 6px;
   font-size: 0.9em;
+  padding: 5px 10px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
 }
 .legend-color {
   width: 16px;
@@ -129,12 +209,13 @@ button:hover { transform: scale(1.05); }
 .join-tournament-btn {
   background: #22c55e;
   color: black;
-  padding: 5px 10px;
-  border-radius: 4px;
+  padding: 8px 15px;
+  border-radius: 6px;
   font-size: 14px;
-  margin-left: 10px;
   cursor: pointer;
   border: none;
+  font-weight: bold;
+  transition: all 0.3s ease;
 }
 .join-tournament-btn:hover {
   background: #16a34a;
@@ -148,6 +229,12 @@ button:hover { transform: scale(1.05); }
   border-radius: 8px;
   border: 1px solid #22c55e;
 }
+
+.current-month {
+  font-size: 1.2em;
+  color: #38bdf8;
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
@@ -155,12 +242,12 @@ button:hover { transform: scale(1.05); }
 <!-- Обновленная шапка с описанием -->
 <section class="welcome-section">
   <div class="welcome-title">
-    <span></span>
-    <span></span>
+    <span>🏓</span>
+    <span>Система организации турниров по настольному теннису</span>
   </div>
   
   <div class="welcome-text">
-    <p><strong></strong></p>
+    <p><strong>Добро пожаловать!</strong> Эта платформа помогает организовать турниры по настольному теннису среди коллег и друзей. Выбирайте даты, присоединяйтесь к турнирам и играйте!</p>
   </div>
   
   <div class="how-it-works">
@@ -196,14 +283,44 @@ button:hover { transform: scale(1.05); }
   </div>
 </section>
 
-<div>
-<input id="login" placeholder="👤 Ваш логин (фамилия на латинице, например: ivanov)">
-<input id="password" type="password" placeholder="🔒 Ваш пароль">
-<button onclick="auth()">🚪 Войти / 📝 Регистрация</button>
-<div id="message"></div>
-</div>
+<!-- Обновленная форма входа -->
+<section class="login-form">
+  <h2>🔐 Вход / Регистрация</h2>
+  <div class="input-group">
+    <input id="login" placeholder="👤 Логин (например: Ivanov)">
+    <input id="password" type="password" placeholder="🔒 Пароль">
+  </div>
+  <button onclick="auth()">🚀 Войти или Зарегистрироваться</button>
+  <div id="message"></div>
+</section>
 
 <h2>🗓️ Выберите даты для игры</h2>
+
+<!-- Управление календарем -->
+<div class="calendar-controls">
+  <div class="month-selector">
+    <select id="monthSelect">
+      <option value="0">Январь</option>
+      <option value="1">Февраль</option>
+      <option value="2">Март</option>
+      <option value="3">Апрель</option>
+      <option value="4">Май</option>
+      <option value="5">Июнь</option>
+      <option value="6">Июль</option>
+      <option value="7">Август</option>
+      <option value="8">Сентябрь</option>
+      <option value="9">Октябрь</option>
+      <option value="10">Ноябрь</option>
+      <option value="11">Декабрь</option>
+    </select>
+    <input id="yearSelect" type="number" value="2024" min="2024" max="2030" style="width: 100px;">
+  </div>
+  <div class="month-nav">
+    <button onclick="prevMonth()">◀ Назад</button>
+    <button onclick="nextMonth()">Вперёд ▶</button>
+  </div>
+</div>
+
 <div id="calendar" class="calendar"></div>
 <button onclick="submitDates()">✅ Подтвердить выбранные даты</button>
 
@@ -251,10 +368,13 @@ const adminPanelDiv = document.getElementById('adminPanel');
 const tournamentAdminListDiv = document.getElementById('tournamentAdminList');
 const activeTournamentsDiv = document.getElementById('activeTournaments');
 const tournamentsListDiv = document.getElementById('tournamentsList');
+const monthSelect = document.getElementById('monthSelect');
+const yearSelect = document.getElementById('yearSelect');
 
 let user = null;
 let selectedDates = [];
 let allTournaments = [];
+let currentDate = new Date();
 
 // --- Авторизация / регистрация ---
 async function auth(){
@@ -345,9 +465,13 @@ async function auth(){
 // --- Календарь ---
 function buildCalendar(){
   calendarDiv.innerHTML = '';
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  
+  // Обновляем элементы выбора месяца и года
+  monthSelect.value = month;
+  yearSelect.value = year;
+  
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month+1, 0).getDate();
 
@@ -358,6 +482,7 @@ function buildCalendar(){
     dayHeader.innerText = daysOfWeek[i];
     dayHeader.style.fontWeight = 'bold';
     dayHeader.style.color = '#94a3b8';
+    dayHeader.style.padding = '5px';
     calendarDiv.appendChild(dayHeader);
   }
 
@@ -367,6 +492,9 @@ function buildCalendar(){
     calendarDiv.appendChild(document.createElement('div'));
   }
 
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  
   for(let d = 1; d <= daysInMonth; d++){
     const day = document.createElement('div');
     day.className = 'day';
@@ -375,15 +503,25 @@ function buildCalendar(){
     day.dataset.date = dateStr;
     
     // Помечаем сегодняшний день
-    const todayStr = today.toISOString().split('T')[0];
     if (dateStr === todayStr) {
       day.style.border = '2px solid #38bdf8';
+      day.style.fontWeight = 'bold';
       day.title = 'Сегодня';
     }
     
+    // Помечаем выбранные дни
+    if(selectedDates.includes(dateStr)) {
+      day.classList.add('selected');
+    }
+    
+    // Помечаем дни с турнирами
+    const tournament = allTournaments.find(t => t.play_date === dateStr);
+    if(tournament) {
+      day.classList.add('tournament');
+      day.title = tournament.name;
+    }
+    
     day.onclick = () => {
-      // Проверяем, есть ли уже турнир на эту дату
-      const isTournamentDay = day.classList.contains('tournament');
       const isSelected = selectedDates.includes(dateStr);
       
       if(isSelected){
@@ -396,18 +534,38 @@ function buildCalendar(){
         day.classList.add('selected');
         
         // Если это день с турниром, показываем сообщение
-        if(isTournamentDay) {
-          const tournament = allTournaments.find(t => t.play_date === dateStr);
-          if(tournament) {
-            messageDiv.innerText = `🎯 Вы выбрали дату с турниром: "${tournament.name}"`;
-            messageDiv.className = 'success';
-          }
+        if(tournament) {
+          messageDiv.innerText = `🎯 Вы выбрали дату с турниром: "${tournament.name}"`;
+          messageDiv.className = 'success';
         }
       }
     }
     calendarDiv.appendChild(day);
   }
 }
+
+// --- Навигация по месяцам ---
+function prevMonth() {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  buildCalendar();
+}
+
+function nextMonth() {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  buildCalendar();
+}
+
+// --- Изменение месяца через селект ---
+monthSelect.addEventListener('change', function() {
+  currentDate.setMonth(parseInt(this.value));
+  buildCalendar();
+});
+
+// --- Изменение года ---
+yearSelect.addEventListener('change', function() {
+  currentDate.setFullYear(parseInt(this.value));
+  buildCalendar();
+});
 
 // --- Загрузка выбранных пользователем дат ---
 async function loadUserSelectedDates(){
@@ -423,14 +581,7 @@ async function loadUserSelectedDates(){
     
     if(userDates && userDates.length > 0) {
       selectedDates = userDates.map(d => d.selected_date);
-      
-      // Помечаем выбранные даты в календаре
-      selectedDates.forEach(dateStr => {
-        const dayDiv = calendarDiv.querySelector(`[data-date="${dateStr}"]`);
-        if(dayDiv) {
-          dayDiv.classList.add('selected');
-        }
-      });
+      // Календарь обновится при следующем buildCalendar()
     }
   } catch(e) {
     console.error('Load user dates error:', e);
@@ -554,21 +705,10 @@ async function loadTournaments(){
     allTournaments = tournaments || [];
     
     // Обновляем календарь
-    const days = calendarDiv.querySelectorAll('.day');
-    days.forEach(day => day.classList.remove('tournament'));
-
-    if(allTournaments.length > 0) {
-      allTournaments.forEach(t => {
-        const dayDiv = calendarDiv.querySelector(`[data-date="${t.play_date}"]`);
-        if(dayDiv) {
-          dayDiv.classList.add('tournament');
-          dayDiv.title = t.name;
-        }
-      });
-      
-      // Показываем список активных турниров
-      displayActiveTournaments();
-    }
+    buildCalendar();
+    
+    // Показываем список активных турниров
+    displayActiveTournaments();
     
     // Обновляем админ-список
     renderAdminTournamentList(allTournaments);
@@ -698,10 +838,7 @@ async function joinTournament(tournamentDate) {
     selectedDates.push(tournamentDate);
     
     // Обновляем календарь
-    const dayDiv = calendarDiv.querySelector(`[data-date="${tournamentDate}"]`);
-    if(dayDiv) {
-      dayDiv.classList.add('selected');
-    }
+    buildCalendar();
 
     // Показываем сообщение об успехе
     const tournament = allTournaments.find(t => t.play_date === tournamentDate);
