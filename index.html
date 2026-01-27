@@ -8,8 +8,8 @@
 <style>
 body { margin:0; font-family:system-ui; background:#0f172a; color:white; }
 .container { max-width:700px; margin:auto; padding:15px; text-align:center; }
-h1,h2 { margin-bottom:10px; }
-input,button { width:100%; padding:10px; border-radius:8px; border:none; margin-top:8px; font-size:16px; }
+h1,h2,h3 { margin-bottom:10px; }
+input,button,select { width:100%; padding:10px; border-radius:8px; border:none; margin-top:8px; font-size:16px; }
 button { background:#38bdf8; font-weight:bold; cursor:pointer; transition: transform 0.2s; }
 button:hover { transform: scale(1.05); }
 
@@ -20,6 +20,11 @@ button:hover { transform: scale(1.05); }
 
 .success { color:#22c55e; font-weight:bold; margin-top:10px; }
 .error { color:#f87171; font-weight:bold; margin-top:10px; }
+
+.admin-panel { margin-top:20px; border:1px solid #38bdf8; padding:10px; border-radius:8px; }
+.tournament-item { background:#1e293b; margin:5px 0; padding:5px 8px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; }
+.tournament-item span { flex:1; text-align:left; }
+.tournament-item button { width:auto; padding:5px 10px; margin-left:5px; background:#f87171; color:black; }
 </style>
 </head>
 <body>
@@ -40,6 +45,16 @@ button:hover { transform: scale(1.05); }
 <span style="background:#22c55e; color:black; padding:2px 6px; border-radius:4px;">Выбранная дата</span>
 <span style="background:#facc15; color:black; padding:2px 6px; border-radius:4px;">Турнир</span>
 </div>
+
+<div class="admin-panel" id="adminPanel" style="display:none;">
+<h3>Админка: Управление турнирами</h3>
+<div>
+<input id="adminTournamentName" placeholder="Название турнира">
+<input id="adminTournamentDate" type="date">
+<button onclick="createTournament()">Создать турнир</button>
+</div>
+<div id="tournamentList"></div>
+</div>
 </div>
 
 <script>
@@ -51,6 +66,8 @@ const loginInput = document.getElementById('login');
 const passwordInput = document.getElementById('password');
 const messageDiv = document.getElementById('message');
 const calendarDiv = document.getElementById('calendar');
+const adminPanelDiv = document.getElementById('adminPanel');
+const tournamentListDiv = document.getElementById('tournamentList');
 
 let user = null;
 let selectedDates = [];
@@ -68,7 +85,6 @@ async function auth(){
     return;
   }
 
-  // Только ASCII
   if(!/^[\x20-\x7E]+$/.test(loginVal) || !/^[\x20-\x7E]+$/.test(passVal)){
     messageDiv.innerText = 'Логин и пароль должны быть только латиница/цифры';
     messageDiv.className = 'error';
@@ -85,7 +101,6 @@ async function auth(){
     let foundUser = data.find(u => u.password === passVal);
 
     if(!foundUser){
-      // Регистрация нового пользователя
       const {data: newUser, error: insertError} = await supabaseClient
         .from('pp_users').insert({login: loginVal,password: passVal}).select().single();
       if(insertError) throw insertError;
@@ -100,6 +115,7 @@ async function auth(){
     user = foundUser;
     buildCalendar();
     await loadTournaments();
+    if(user.login.toLowerCase() === 'admin') adminPanelDiv.style.display='block';
 
   } catch(e){
     console.error(e);
@@ -170,7 +186,6 @@ async function checkTournaments(){
 
   for(const [date, count] of Object.entries(dateCount)){
     if(count>=3){
-      // Проверяем, существует ли турнир
       const {data: existing} = await supabaseClient.from('pp_tournaments')
         .select('*').eq('play_date', date);
       if(existing.length===0){
@@ -185,7 +200,7 @@ async function checkTournaments(){
 
 // --- Загрузка турниров ---
 async function loadTournaments(){
-  const {data: tournaments, error} = await supabaseClient.from('pp_tournaments').select('*');
+  const {data: tournaments, error} = await supabaseClient.from('pp_tournaments').select('*').order('play_date');
   if(error){ console.error('Ошибка загрузки турниров', error); return; }
 
   const days = calendarDiv.querySelectorAll('.day');
@@ -194,6 +209,55 @@ async function loadTournaments(){
   tournaments.forEach(t=>{
     const dayDiv = calendarDiv.querySelector(`[data-date="${t.play_date}"]`);
     if(dayDiv) dayDiv.classList.add('tournament');
+  });
+
+  renderAdminTournamentList(tournaments);
+}
+
+// --- Админка: создать турнир ---
+async function createTournament(){
+  const name = document.getElementById('adminTournamentName').value.trim();
+  const date = document.getElementById('adminTournamentDate').value;
+  if(!name || !date) return alert('Введите название и дату');
+
+  try{
+    await supabaseClient.from('pp_tournaments').insert({name, play_date: date});
+    await loadTournaments();
+    alert('Турнир создан!');
+  } catch(e){ console.error(e); alert('Ошибка: '+e.message); }
+}
+
+// --- Админка: список турниров с редактированием/удалением ---
+function renderAdminTournamentList(tournaments){
+  tournamentListDiv.innerHTML='';
+  tournaments.forEach(t=>{
+    const div = document.createElement('div');
+    div.className='tournament-item';
+    const span = document.createElement('span');
+    span.innerText = `${t.name} (${t.play_date})`;
+    const editBtn = document.createElement('button'); editBtn.innerText='✏️'; 
+    editBtn.onclick = async ()=>{
+      const newName = prompt('Новое название турнира', t.name);
+      if(!newName) return;
+      await supabaseClient.from('pp_tournaments').update({name:newName}).eq('id', t.id);
+      await loadTournaments();
+    };
+    const delBtn = document.createElement('button'); delBtn.innerText='🗑️';
+    delBtn.onclick = async ()=>{
+      if(confirm('Удалить турнир?')){
+        await supabaseClient.from('pp_tournaments').delete().eq('id', t.id);
+        await loadTournaments();
+      }
+    };
+    const participantsBtn = document.createElement('button'); participantsBtn.innerText='👥';
+    participantsBtn.onclick = async ()=>{
+      const {data: users} = await supabaseClient.from('pp_user_dates')
+        .select('user_id, selected_date')
+        .eq('selected_date', t.play_date);
+      alert(`Участники (${users.length}):\n`+users.map(u=>u.user_id).join('\n'));
+    };
+    div.appendChild(span); div.appendChild(editBtn); div.appendChild(delBtn); div.appendChild(participantsBtn);
+    tournamentListDiv.appendChild(div);
   });
 }
 </script>
