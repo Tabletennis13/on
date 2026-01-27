@@ -42,10 +42,10 @@ button:hover { transform: scale(1.05); }
 </div>
 
 <script>
+// ⚡ ВАЖНО: вставь сюда свой рабочий "anon public" ключ из Supabase
 const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRyd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
+const SUPABASE_ANON_KEY = 'ВАШ_АНОН_КЛЮЧ_СЮДА'
 
-// ⚡ Создаём клиент один раз
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const loginInput = document.getElementById('login')
@@ -67,90 +67,92 @@ async function auth(){
     return
   }
 
-  // Проверяем, есть ли пользователь
-  const {data, error} = await supabaseClient
-    .from('pp_users')
-    .select('*')
-    .eq('login', loginVal)
-    .eq('password', passVal)
-    .single()
-
-  if(error && error.code !== 'PGRST116'){ 
-    messageDiv.innerText = 'Ошибка при авторизации: '+error.message
-    messageDiv.className = 'error'
-    return
-  }
-
-  if(!data){
-    // создаем нового пользователя
-    const {data: newUser, error: insertError} = await supabaseClient
+  try {
+    // Проверяем, есть ли пользователь
+    const {data, error} = await supabaseClient
       .from('pp_users')
-      .insert({login: loginVal, password: passVal})
-      .select()
+      .select('*')
+      .eq('login', loginVal)
+      .eq('password', passVal)
       .single()
-    if(insertError){
-      messageDiv.innerText = 'Ошибка при регистрации: '+insertError.message
-      messageDiv.className = 'error'
-      return
-    }
-    user = newUser
-    messageDiv.innerText = 'Регистрация выполнена!'
-    messageDiv.className = 'success'
-  } else {
-    user = data
-    messageDiv.innerText = 'Вход выполнен!'
-    messageDiv.className = 'success'
-  }
 
-  loadTournaments()
+    if(error && error.code !== 'PGRST116'){ 
+      throw error
+    }
+
+    if(!data){
+      // создаем нового пользователя
+      const {data: newUser, error: insertError} = await supabaseClient
+        .from('pp_users')
+        .insert({login: loginVal, password: passVal})
+        .select()
+        .single()
+      if(insertError) throw insertError
+      user = newUser
+      messageDiv.innerText = 'Регистрация выполнена!'
+      messageDiv.className = 'success'
+    } else {
+      user = data
+      messageDiv.innerText = 'Вход выполнен!'
+      messageDiv.className = 'success'
+    }
+
+    loadTournaments()
+  } catch(e){
+    console.error('Ошибка авторизации:', e)
+    messageDiv.innerText = 'Ошибка авторизации: '+e.message
+    messageDiv.className = 'error'
+  }
 }
 
 async function loadTournaments(){
-  const {data: tournaments, error} = await supabaseClient
-    .from('pp_tournaments')
-    .select('*')
-    .order('play_date', {ascending:true})
+  try {
+    const {data: tournaments, error} = await supabaseClient
+      .from('pp_tournaments')
+      .select('*')
+      .order('play_date', {ascending:true})
 
-  if(error){
-    console.error('Ошибка загрузки турниров:', error)
-    messageDiv.innerText = 'Ошибка загрузки турниров: '+error.message
-    messageDiv.className = 'error'
-    return
-  }
+    if(error) throw error
 
-  tournamentList.innerHTML = ''
-  for(const t of tournaments){
-    const card = document.createElement('div')
-    card.className = 'tournament-card'
-    card.innerText = `${t.play_date} 🏆`
+    tournamentList.innerHTML = ''
+    for(const t of tournaments){
+      const card = document.createElement('div')
+      card.className = 'tournament-card'
+      card.innerText = `${t.play_date} 🏆`
 
-    // Tooltip с участниками
-    const tt = document.createElement('div')
-    tt.className = 'tooltip'
-    const {data: participants} = await supabaseClient
-      .from('pp_tournament_players')
-      .select('user_id')
-      .eq('tournament_id', t.id)
+      // Tooltip с участниками
+      const tt = document.createElement('div')
+      tt.className = 'tooltip'
+      const {data: participants} = await supabaseClient
+        .from('pp_tournament_players')
+        .select('user_id')
+        .eq('tournament_id', t.id)
 
-    if(participants && participants.length > 0){
-      const names = []
-      for(const p of participants){
-        const {data: u} = await supabaseClient
-          .from('pp_users')
-          .select('login')
-          .eq('id', p.user_id)
-          .single()
-        if(u) names.push(u.login)
+      if(participants && participants.length > 0){
+        const names = []
+        for(const p of participants){
+          const {data: u} = await supabaseClient
+            .from('pp_users')
+            .select('login')
+            .eq('id', p.user_id)
+            .single()
+          if(u) names.push(u.login)
+        }
+        tt.innerText = 'Участники: '+names.join(', ')
+        card.appendChild(tt)
       }
-      tt.innerText = 'Участники: '+names.join(', ')
-      card.appendChild(tt)
+
+      tournamentList.appendChild(card)
     }
 
-    tournamentList.appendChild(card)
+  } catch(e){
+    console.error('Ошибка загрузки турниров:', e)
+    messageDiv.innerText = 'Ошибка загрузки турниров: '+e.message
+    messageDiv.className = 'error'
   }
 }
 
-// Загружаем турниры сразу при открытии страницы (даже без логина)
+// Загружаем турниры сразу при открытии страницы
 loadTournaments()
 </script>
 </body>
