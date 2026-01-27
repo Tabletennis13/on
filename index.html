@@ -4,67 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🏓 Календарь турниров</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-body {
-  margin: 0;
-  background: #0f172a;
-  color: white;
-  font-family: system-ui, sans-serif;
-}
-.container {
-  max-width: 420px;
-  margin: auto;
-  padding: 10px;
-}
-h1 { text-align: center; }
-input, button {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  margin-top: 8px;
-}
-button {
-  background: #38bdf8;
-  font-weight: bold;
-  cursor: pointer;
-}
-.month-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 10px 0;
-}
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-}
-.day {
-  background: #1e293b;
-  border-radius: 8px;
-  padding: 10px 0;
-  text-align: center;
-  cursor: pointer;
-}
-.chosen { background: #facc15; color: black; }
-.tournament { background: #22d3ee; color: black; }
-.legend { font-size: 14px; margin-top: 10px; }
-.admin {
-  margin-top: 20px;
-  background: #020617;
-  padding: 10px;
-  border-radius: 10px;
-}
+body { margin:0; font-family:system-ui; background:#0f172a; color:white; }
+.container { max-width:420px; margin:auto; padding:10px; }
+h1 { text-align:center; }
+input,button { width:100%; padding:10px; border-radius:8px; border:none; margin-top:8px; }
+button { background:#38bdf8; font-weight:bold; cursor:pointer; }
+.month-nav { display:flex; justify-content:space-between; margin:10px 0; }
+.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.day { background:#1e293b; border-radius:8px; padding:10px 0; text-align:center; cursor:pointer; }
+.chosen { background:#facc15; color:black; }
+.tournament { background:#22d3ee; color:black; }
+.legend { font-size:14px; margin-top:10px; }
+.admin { margin-top:20px; background:#020617; padding:10px; border-radius:10px; }
+.profile { margin-top:20px; background:#111827; padding:10px; border-radius:10px; }
 </style>
 </head>
-
 <body>
 <div class="container">
-
 <h1>🏓 Турниры</h1>
 
 <div id="auth">
@@ -74,25 +32,34 @@ button {
 </div>
 
 <div id="app" style="display:none">
+
+  <div class="profile" id="profileDiv" style="display:none">
+    <h3>Профиль: <span id="profileName"></span></h3>
+    <div>Ваши выбранные даты:</div>
+    <ul id="myDates"></ul>
+    <div>Турниры, в которых вы участвуете:</div>
+    <ul id="myTournaments"></ul>
+  </div>
+
   <div class="month-nav">
     <button onclick="changeMonth(-1)">◀</button>
     <div id="monthTitle"></div>
-    <button onclick="changeMonth(1)">▶</button>
+    <button onclick="changeMonth(1)">▶</div>
   </div>
 
   <div class="calendar" id="calendar"></div>
-
   <div class="legend">
-    🟨 выбрано игроками<br>
+    🟨 выбранные игроками<br>
     🟦 турнир создан
   </div>
 
   <div id="admin" class="admin" style="display:none">
     <h3>Админ панель</h3>
     <div id="tournaments"></div>
+    <button onclick="createTournament()">Создать турнир вручную</button>
   </div>
-</div>
 
+</div>
 </div>
 
 <script>
@@ -101,125 +68,115 @@ const db = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
 )
 
-let user = null
-let choices = []
-let tournaments = []
-let current = new Date()
+let user=null, choices=[], tournaments=[], current=new Date()
 
-// DOM элементы
-const authDiv = document.getElementById('auth')
-const appDiv = document.getElementById('app')
-const calendar = document.getElementById('calendar')
-const monthTitle = document.getElementById('monthTitle')
-const adminDiv = document.getElementById('admin')
-const tournamentsDiv = document.getElementById('tournaments')
-const loginInput = document.getElementById('login')
-const passwordInput = document.getElementById('password')
+const authDiv=document.getElementById('auth')
+const appDiv=document.getElementById('app')
+const calendar=document.getElementById('calendar')
+const monthTitle=document.getElementById('monthTitle')
+const adminDiv=document.getElementById('admin')
+const tournamentsDiv=document.getElementById('tournaments')
+const loginInput=document.getElementById('login')
+const passwordInput=document.getElementById('password')
+const profileDiv=document.getElementById('profileDiv')
+const profileName=document.getElementById('profileName')
+const myDates=document.getElementById('myDates')
+const myTournaments=document.getElementById('myTournaments')
 
-// Авторизация / регистрация
-async function auth() {
-  const loginVal = loginInput.value
-  const passVal = passwordInput.value
+async function auth(){
+  const loginVal=loginInput.value
+  const passVal=passwordInput.value
 
-  let { data } = await db.from('pp_users')
-    .select('*')
-    .eq('login', loginVal)
-    .eq('password', passVal)
-    .single()
+  let {data} = await db.from('pp_users').select('*')
+    .eq('login',loginVal).eq('password',passVal).single()
 
-  if (!data) {
-    await db.from('pp_users').insert({ login: loginVal, password: passVal })
+  if(!data){
+    await db.from('pp_users').insert({login:loginVal,password:passVal})
     return auth()
   }
 
-  user = data
-  authDiv.style.display = 'none'
-  appDiv.style.display = 'block'
-  if (user.is_admin) adminDiv.style.display = 'block'
+  user=data
+  authDiv.style.display='none'
+  appDiv.style.display='block'
+  profileDiv.style.display='block'
+  profileName.innerText=user.login
+  if(user.is_admin) adminDiv.style.display='block'
   load()
 }
 
-// Загрузка данных
-async function load() {
-  choices = (await db.from('pp_date_choices').select('*')).data || []
-  tournaments = (await db.from('pp_tournaments').select('*')).data || []
+async function load(){
+  choices=(await db.from('pp_date_choices').select('*')).data||[]
+  tournaments=(await db.from('pp_tournaments').select('*')).data||[]
   renderCalendar()
+  renderProfile()
   renderAdmin()
 }
 
-// Смена месяца
-function changeMonth(n) {
-  current.setMonth(current.getMonth() + n)
-  renderCalendar()
-}
+function changeMonth(n){current.setMonth(current.getMonth()+n); renderCalendar()}
 
-// Рендер календаря
-function renderCalendar() {
-  calendar.innerHTML = ''
-  monthTitle.innerText = current.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})
-
-  const y = current.getFullYear()
-  const m = current.getMonth()
-  const start = (new Date(y,m,1).getDay() || 7) - 1
-  const days = new Date(y,m+1,0).getDate()
-
+function renderCalendar(){
+  calendar.innerHTML=''
+  monthTitle.innerText=current.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})
+  const y=current.getFullYear(), m=current.getMonth()
+  const start=(new Date(y,m,1).getDay()||7)-1
+  const days=new Date(y,m+1,0).getDate()
   for(let i=0;i<start;i++) calendar.appendChild(document.createElement('div'))
-
-  for(let d=1; d<=days; d++){
-    const date = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    const div = document.createElement('div')
-    div.className = 'day'
-    if (choices.some(c=>c.play_date===date)) div.classList.add('chosen')
-    if (tournaments.some(t=>t.play_date===date)) div.classList.add('tournament')
-    div.innerText = d
-    div.onclick = () => toggleDate(date)
+  for(let d=1;d<=days;d++){
+    const date=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+    const div=document.createElement('div')
+    div.className='day'
+    if(choices.some(c=>c.play_date===date)) div.classList.add('chosen')
+    if(tournaments.some(t=>t.play_date===date)) div.classList.add('tournament')
+    div.innerText=d
+    div.onclick=()=>toggleDate(date)
     calendar.appendChild(div)
   }
 }
 
-// Выбор/снятие даты
-async function toggleDate(date) {
-  const exists = choices.find(c => c.play_date === date && c.user_id === user.id)
-
-  if (exists) {
-    await db.from('pp_date_choices').delete().eq('id', exists.id)
-    return load()
+async function toggleDate(date){
+  const exists=choices.find(c=>c.play_date===date&&c.user_id===user.id)
+  if(exists){await db.from('pp_date_choices').delete().eq('id',exists.id); return load()}
+  await db.from('pp_date_choices').insert({user_id:user.id,play_date:date})
+  const users=[...new Set(choices.filter(c=>c.play_date===date).map(c=>c.user_id).concat(user.id))]
+  if(users.length>=3 && !tournaments.find(t=>t.play_date===date)){
+    const {data:t}=await db.from('pp_tournaments').insert({play_date:date,title:'Турнир '+date}).select().single()
+    await db.from('pp_tournament_players').insert(users.map(u=>({tournament_id:t.id,user_id:u})))
   }
-
-  await db.from('pp_date_choices').insert({ user_id: user.id, play_date: date })
-
-  const users = [...new Set(
-    choices.filter(c => c.play_date === date).map(c => c.user_id).concat(user.id)
-  )]
-
-  if (users.length >= 3 && !tournaments.find(t => t.play_date === date)) {
-    const { data:t } = await db.from('pp_tournaments')
-      .insert({ play_date: date, title: 'Турнир ' + date })
-      .select().single()
-
-    await db.from('pp_tournament_players')
-      .insert(users.map(u => ({ tournament_id: t.id, user_id: u })))
-  }
-
   load()
 }
 
-// Рендер админ-панели
-function renderAdmin() {
-  tournamentsDiv.innerHTML = ''
-  tournaments.forEach(t => {
-    const input = document.createElement('input')
-    input.value = t.title
-    input.onchange = () => db.from('pp_tournaments').update({ title: input.value }).eq('id', t.id)
-
-    const btn = document.createElement('button')
-    btn.innerText = 'Удалить'
-    btn.onclick = () => db.from('pp_tournaments').delete().eq('id', t.id).then(load)
-
-    tournamentsDiv.append(input, btn)
+function renderProfile(){
+  myDates.innerHTML=''
+  choices.filter(c=>c.user_id===user.id).forEach(c=>{
+    const li=document.createElement('li'); li.innerText=c.play_date; myDates.appendChild(li)
+  })
+  myTournaments.innerHTML=''
+  tournaments.forEach(t=>{
+    db.from('pp_tournament_players').select('*').eq('tournament_id',t.id).then(res=>{
+      if(res.data.some(p=>p.user_id===user.id)){
+        const li=document.createElement('li'); li.innerText=t.title; myTournaments.appendChild(li)
+      }
+    })
   })
 }
-</script>
 
+// Admin
+function renderAdmin(){
+  tournamentsDiv.innerHTML=''
+  tournaments.forEach(t=>{
+    const input=document.createElement('input'); input.value=t.title
+    input.onchange=()=>db.from('pp_tournaments').update({title:input.value}).eq('id',t.id)
+    const btn=document.createElement('button'); btn.innerText='Удалить'
+    btn.onclick=()=>db.from('pp_tournaments').delete().eq('id',t.id).then(load)
+    tournamentsDiv.append(input,btn)
+  })
+}
+
+function createTournament(){
+  const date=prompt('Введите дату YYYY-MM-DD'); if(!date) return
+  const title=prompt('Введите название турнира'); if(!title) return
+  db.from('pp_tournaments').insert({play_date:date,title,is_manual:true}).then(load)
+}
+</script>
 </body>
 </html>
