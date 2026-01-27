@@ -45,8 +45,8 @@ button:hover { transform: scale(1.05); }
 const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRyd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
 
-// Создаём клиент только один раз
-window.supabase = window.supabase || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// ⚡ Создаём клиент один раз
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const loginInput = document.getElementById('login')
 const passwordInput = document.getElementById('password')
@@ -67,8 +67,8 @@ async function auth(){
     return
   }
 
-  // проверяем есть ли пользователь
-  const {data, error} = await supabase
+  // Проверяем, есть ли пользователь
+  const {data, error} = await supabaseClient
     .from('pp_users')
     .select('*')
     .eq('login', loginVal)
@@ -83,7 +83,7 @@ async function auth(){
 
   if(!data){
     // создаем нового пользователя
-    const {data: newUser, error: insertError} = await supabase
+    const {data: newUser, error: insertError} = await supabaseClient
       .from('pp_users')
       .insert({login: loginVal, password: passVal})
       .select()
@@ -106,7 +106,7 @@ async function auth(){
 }
 
 async function loadTournaments(){
-  const {data: tournaments, error} = await supabase
+  const {data: tournaments, error} = await supabaseClient
     .from('pp_tournaments')
     .select('*')
     .order('play_date', {ascending:true})
@@ -127,14 +127,15 @@ async function loadTournaments(){
     // Tooltip с участниками
     const tt = document.createElement('div')
     tt.className = 'tooltip'
-    const {data: participants} = await supabase
+    const {data: participants} = await supabaseClient
       .from('pp_tournament_players')
       .select('user_id')
       .eq('tournament_id', t.id)
+
     if(participants && participants.length > 0){
       const names = []
       for(const p of participants){
-        const {data: u} = await supabase
+        const {data: u} = await supabaseClient
           .from('pp_users')
           .select('login')
           .eq('id', p.user_id)
