@@ -96,92 +96,116 @@ button {
 </div>
 
 <script>
-const supabase = supabaseJs.createClient(
+const db = supabase.createClient(
   'https://bqycjfcjtdawyrysgrbw.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
 )
 
-let user, choices=[], tournaments=[], current=new Date()
+let user = null
+let choices = []
+let tournaments = []
+let current = new Date()
 
 async function auth(){
-  const login=loginInput.value, password=passwordInput.value
-  let {data}=await supabase.from('pp_users').select('*')
-    .eq('login',login).eq('password',password).single()
-  if(!data){
-    await supabase.from('pp_users').insert({login,password})
+  const loginVal = login.value
+  const passVal = password.value
+
+  let { data } = await db.from('pp_users')
+    .select('*')
+    .eq('login', loginVal)
+    .eq('password', passVal)
+    .single()
+
+  if (!data) {
+    await db.from('pp_users').insert({ login: loginVal, password: passVal })
     return auth()
   }
-  user=data
-  authDiv.style.display='none'
-  app.style.display='block'
-  if(user.is_admin) admin.style.display='block'
+
+  user = data
+  auth.style.display = 'none'
+  app.style.display = 'block'
+  if (user.is_admin) admin.style.display = 'block'
   load()
 }
 
 async function load(){
-  choices=(await supabase.from('pp_date_choices').select('*')).data||[]
-  tournaments=(await supabase.from('pp_tournaments').select('*')).data||[]
+  choices = (await db.from('pp_date_choices').select('*')).data || []
+  tournaments = (await db.from('pp_tournaments').select('*')).data || []
   render()
   renderAdmin()
 }
 
-function changeMonth(n){current.setMonth(current.getMonth()+n);render()}
+function changeMonth(n){
+  current.setMonth(current.getMonth() + n)
+  render()
+}
 
 function render(){
-  calendar.innerHTML=''
-  monthTitle.innerText=current.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})
-  const y=current.getFullYear(), m=current.getMonth()
-  const start=(new Date(y,m,1).getDay()||7)-1
-  const days=new Date(y,m+1,0).getDate()
+  calendar.innerHTML = ''
+  monthTitle.innerText = current.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})
+
+  const y = current.getFullYear()
+  const m = current.getMonth()
+  const start = (new Date(y,m,1).getDay() || 7) - 1
+  const days = new Date(y,m+1,0).getDate()
+
   for(let i=0;i<start;i++) calendar.appendChild(document.createElement('div'))
-  for(let d=1;d<=days;d++){
-    const date=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    const div=document.createElement('div')
-    div.className='day'
-    if(choices.some(c=>c.play_date===date)) div.classList.add('chosen')
-    if(tournaments.some(t=>t.play_date===date)) div.classList.add('tournament')
-    div.innerText=d
-    div.onclick=()=>toggle(date)
+
+  for(let d=1; d<=days; d++){
+    const date = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+    const div = document.createElement('div')
+    div.className = 'day'
+    if (choices.some(c=>c.play_date===date)) div.classList.add('chosen')
+    if (tournaments.some(t=>t.play_date===date)) div.classList.add('tournament')
+    div.innerText = d
+    div.onclick = () => toggle(date)
     calendar.appendChild(div)
   }
 }
 
 async function toggle(date){
-  const exists=choices.find(c=>c.play_date===date && c.user_id===user.id)
-  if(exists){
-    await supabase.from('pp_date_choices').delete().eq('id',exists.id)
+  const exists = choices.find(c=>c.play_date===date && c.user_id===user.id)
+
+  if (exists) {
+    await db.from('pp_date_choices').delete().eq('id', exists.id)
     return load()
   }
-  await supabase.from('pp_date_choices').insert({user_id:user.id,play_date:date})
-  const users=[...new Set(choices.filter(c=>c.play_date===date).map(c=>c.user_id).concat(user.id))]
-  if(users.length>=3 && !tournaments.find(t=>t.play_date===date)){
-    const {data:t}=await supabase.from('pp_tournaments')
-      .insert({play_date:date,title:'Турнир '+date}).select().single()
-    await supabase.from('pp_tournament_players')
-      .insert(users.map(u=>({tournament_id:t.id,user_id:u})))
+
+  await db.from('pp_date_choices').insert({ user_id: user.id, play_date: date })
+
+  const users = [...new Set(
+    choices.filter(c=>c.play_date===date).map(c=>c.user_id).concat(user.id)
+  )]
+
+  if (users.length >= 3 && !tournaments.find(t=>t.play_date===date)) {
+    const { data:t } = await db.from('pp_tournaments')
+      .insert({ play_date: date, title: 'Турнир ' + date })
+      .select().single()
+
+    await db.from('pp_tournament_players')
+      .insert(users.map(u=>({ tournament_id: t.id, user_id: u })))
   }
+
   load()
 }
 
 function renderAdmin(){
-  tournamentsDiv.innerHTML=''
+  tournamentsDiv.innerHTML = ''
   tournaments.forEach(t=>{
-    const i=document.createElement('input'); i.value=t.title
-    i.onchange=()=>supabase.from('pp_tournaments').update({title:i.value}).eq('id',t.id)
-    const b=document.createElement('button'); b.innerText='Удалить'
-    b.onclick=()=>supabase.from('pp_tournaments').delete().eq('id',t.id).then(load)
+    const i = document.createElement('input')
+    i.value = t.title
+    i.onchange = () =>
+      db.from('pp_tournaments').update({ title: i.value }).eq('id', t.id)
+
+    const b = document.createElement('button')
+    b.innerText = 'Удалить'
+    b.onclick = () =>
+      db.from('pp_tournaments').delete().eq('id', t.id).then(load)
+
     tournamentsDiv.append(i,b)
   })
 }
-
-const loginInput=document.getElementById('login')
-const passwordInput=document.getElementById('password')
-const authDiv=document.getElementById('auth')
-const app=document.getElementById('app')
-const calendar=document.getElementById('calendar')
-const monthTitle=document.getElementById('monthTitle')
-const admin=document.getElementById('admin')
-const tournamentsDiv=document.getElementById('tournaments')
 </script>
+
 </body>
 </html>
