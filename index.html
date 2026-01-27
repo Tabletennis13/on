@@ -42,7 +42,7 @@ button:hover { transform: scale(1.05); }
 </div>
 
 <script>
-// ⚡ ВАЖНО: вставь сюда свой рабочий "anon public" ключ из Supabase
+// ⚡ ВАЖНО: вставь сюда свой рабочий anon public key
 const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'
 const SUPABASE_ANON_KEY = 'ВАШ_АНОН_КЛЮЧ_СЮДА'
 
@@ -72,7 +72,7 @@ async function auth(){
     const {data, error} = await supabaseClient
       .from('pp_users')
       .select('*')
-      .eq('login', loginVal)
+      .ilike('login', loginVal) // безопасно для кириллицы
       .eq('password', passVal)
       .single()
 
