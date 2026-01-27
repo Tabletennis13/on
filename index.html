@@ -13,6 +13,81 @@ input,button,select { width:100%; padding:10px; border-radius:8px; border:none; 
 button { background:#38bdf8; font-weight:bold; cursor:pointer; transition: transform 0.2s; }
 button:hover { transform: scale(1.05); }
 
+.welcome-section {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  border-left: 5px solid #38bdf8;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+.welcome-title {
+  color: #facc15;
+  font-size: 1.8em;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+.welcome-text {
+  font-size: 1.1em;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin-bottom: 20px;
+  text-align: left;
+}
+.tip-box {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: left;
+}
+.tip-header {
+  color: #22c55e;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tip-text {
+  color: #94a3b8;
+  font-size: 0.95em;
+}
+.how-it-works {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+  text-align: left;
+}
+.step-number {
+  background: #38bdf8;
+  color: black;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+.step-text {
+  flex: 1;
+}
+
 .calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:20px; }
 .day { padding:10px; border-radius:8px; cursor:pointer; transition:0.2s; position:relative; }
 .day.selected { background:#22c55e; color:black; }
@@ -31,25 +106,96 @@ button:hover { transform: scale(1.05); }
 .tournament-info h3 { color:#facc15; }
 .participant-list { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
 .participant { background:#374151; padding:3px 8px; border-radius:4px; font-size:14px; }
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+}
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>🏓 Турниры по настольному теннису</h1>
+<!-- Обновленная шапка с описанием -->
+<section class="welcome-section">
+  <div class="welcome-title">
+    <span>🏓</span>
+    <span>Добро пожаловать в систему организации турниров по настольному теннису!</span>
+  </div>
+  
+  <div class="welcome-text">
+    <p>✨ <strong>Приветствуем всех любителей настольного тенниса!</strong> Эта платформа создана для удобной организации турниров среди коллег, друзей и единомышленников.</p>
+  </div>
+  
+  <div class="how-it-works">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-text">📅 <strong>Выбирайте свободные даты</strong>, когда вы готовы играть. Просто кликните на дни в календаре ниже, чтобы отметить свои возможности.</div>
+    </div>
+    
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-text">👥 <strong>Автоматическое создание турниров:</strong> Когда 3 или более игроков выберут один и тот же день, турнир создаётся автоматически! 🎉</div>
+    </div>
+    
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-text">🏆 <strong>Участвуйте и побеждайте:</strong> Следите за активными турнирами, узнавайте своих соперников и готовьтесь к игре!</div>
+    </div>
+  </div>
+  
+  <div class="tip-box">
+    <div class="tip-header">💡 Советы для максимальной эффективности:</div>
+    <div class="tip-text">• 🗓️ <strong>Выбирайте сразу несколько дней</strong> на неделе — это значительно увеличит шансы на создание турнира!</div>
+    <div class="tip-text">• 👤 <strong>Используйте фамилию на латинице</strong> в качестве логина (например: ivanov, petrov_s). Так в турнирной таблице сразу будет понятно, кто ваш соперник!</div>
+    <div class="tip-text">• 🤝 <strong>Приглашайте коллег и друзей</strong> — чем больше участников, тем больше турниров!</div>
+  </div>
+  
+  <div style="margin-top: 20px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-radius: 8px;">
+    <div style="color: #facc15; font-weight: bold; display: flex; align-items: center; gap: 8px; justify-content: center;">
+      <span>🚀</span>
+      <span>Готовы начать? Зарегистрируйтесь или войдите ниже!</span>
+    </div>
+  </div>
+</section>
 
 <div>
-<input id="login" placeholder="Логин (латиница/цифры)">
-<input id="password" type="password" placeholder="Пароль">
-<button onclick="auth()">Войти / Регистрация</button>
+<input id="login" placeholder="👤 Ваш логин (фамилия на латинице, например: ivanov)">
+<input id="password" type="password" placeholder="🔒 Ваш пароль">
+<button onclick="auth()">🚪 Войти / 📝 Регистрация</button>
 <div id="message"></div>
 </div>
 
-<h2>Выберите даты</h2>
+<h2>🗓️ Выберите даты для игры</h2>
 <div id="calendar" class="calendar"></div>
-<button onclick="submitDates()">Подтвердить даты</button>
-<div style="margin-top:10px; font-size:14px;">
-<span style="background:#22c55e; color:black; padding:2px 6px; border-radius:4px;">Выбранная дата</span>
-<span style="background:#facc15; color:black; padding:2px 6px; border-radius:4px; margin-left:5px;">Турнир</span>
+<button onclick="submitDates()">✅ Подтвердить выбранные даты</button>
+
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-color" style="background:#22c55e;"></div>
+    <span>Выбранная вами дата</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color" style="background:#facc15;"></div>
+    <span>Запланированный турнир 🏓</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color" style="background:#475569;"></div>
+    <span>Доступный день</span>
+  </div>
 </div>
 
 <div id="activeTournaments" class="tournament-info" style="display:none;">
@@ -58,11 +204,11 @@ button:hover { transform: scale(1.05); }
 </div>
 
 <div class="admin-panel" id="adminPanel" style="display:none;">
-<h3>Админка: Управление турнирами</h3>
+<h3>⚙️ Административная панель</h3>
 <div>
-<input id="adminTournamentName" placeholder="Название турнира">
+<input id="adminTournamentName" placeholder="🎯 Название турнира">
 <input id="adminTournamentDate" type="date">
-<button onclick="createTournament()">Создать турнир</button>
+<button onclick="createTournament()">✨ Создать турнир</button>
 </div>
 <div id="tournamentAdminList"></div>
 </div>
@@ -94,13 +240,13 @@ async function auth(){
   messageDiv.className = '';
 
   if(!loginVal || !passVal){ 
-    messageDiv.innerText = 'Введите логин и пароль';
+    messageDiv.innerText = '⚠️ Введите логин и пароль';
     messageDiv.className = 'error';
     return;
   }
 
-  if(!/^[a-zA-Z0-9]+$/.test(loginVal) || !/^[a-zA-Z0-9]+$/.test(passVal)){
-    messageDiv.innerText = 'Логин и пароль должны быть только латиница/цифры';
+  if(!/^[a-zA-Z0-9_]+$/.test(loginVal) || !/^[a-zA-Z0-9]+$/.test(passVal)){
+    messageDiv.innerText = '🚫 Логин и пароль должны содержать только латинские буквы, цифры (логин может содержать _)';
     messageDiv.className = 'error';
     return;
   }
@@ -120,7 +266,7 @@ async function auth(){
       // Пользователь существует - проверяем пароль
       foundUser = existingUser.find(u => u.password === passVal);
       if(!foundUser) {
-        messageDiv.innerText = 'Неверный пароль';
+        messageDiv.innerText = '❌ Неверный пароль';
         messageDiv.className = 'error';
         return;
       }
@@ -149,12 +295,12 @@ async function auth(){
         foundUser = newUser;
       }
       
-      messageDiv.innerText = 'Регистрация выполнена!';
+      messageDiv.innerText = '✅ Регистрация выполнена успешно! Добро пожаловать!';
       messageDiv.className = 'success';
     }
 
     user = foundUser;
-    messageDiv.innerText = 'Вход выполнен! Добро пожаловать, ' + user.login;
+    messageDiv.innerText = '👋 Вход выполнен! Добро пожаловать, ' + user.login + '!';
     messageDiv.className = 'success';
     
     buildCalendar();
@@ -167,7 +313,7 @@ async function auth(){
 
   } catch(e){
     console.error('Auth error:', e);
-    messageDiv.innerText = 'Ошибка: ' + (e.message || 'Неизвестная ошибка');
+    messageDiv.innerText = '❌ Ошибка: ' + (e.message || 'Неизвестная ошибка');
     messageDiv.className = 'error';
   }
 }
@@ -203,6 +349,14 @@ function buildCalendar(){
     day.innerText = d;
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     day.dataset.date = dateStr;
+    
+    // Помечаем сегодняшний день
+    const todayStr = today.toISOString().split('T')[0];
+    if (dateStr === todayStr) {
+      day.style.border = '2px solid #38bdf8';
+      day.title = 'Сегодня';
+    }
+    
     day.onclick = () => {
       if(selectedDates.includes(dateStr)){
         selectedDates = selectedDates.filter(x => x !== dateStr);
@@ -247,12 +401,12 @@ async function loadUserSelectedDates(){
 // --- Подтверждение выбранных дат ---
 async function submitDates(){
   if(!user) {
-    alert('Сначала войдите!');
+    alert('⚠️ Сначала войдите в систему!');
     return;
   }
 
   if(selectedDates.length === 0) {
-    alert('Выберите хотя бы одну дату!');
+    alert('📅 Выберите хотя бы одну дату!');
     return;
   }
 
@@ -275,7 +429,7 @@ async function submitDates(){
 
     if(error) throw error;
 
-    messageDiv.innerText = 'Даты сохранены! Проверяем возможность создания турниров...';
+    messageDiv.innerText = '✅ Даты сохранены! Проверяем возможность создания турниров... 🎯';
     messageDiv.className = 'success';
     
     // Проверяем и создаем турниры автоматически
@@ -284,7 +438,7 @@ async function submitDates(){
     
   } catch(e){
     console.error('Submit dates error:', e);
-    messageDiv.innerText = 'Ошибка сохранения дат: ' + (e.message || 'Неизвестная ошибка');
+    messageDiv.innerText = '❌ Ошибка сохранения дат: ' + (e.message || 'Неизвестная ошибка');
     messageDiv.className = 'error';
   }
 }
@@ -330,7 +484,7 @@ async function checkAndCreateTournaments(){
           .limit(3);
         
         const userNames = users ? users.map(u => u.login).join(', ') : '';
-        const tournamentName = `Турнир ${date} (${userNames})`;
+        const tournamentName = `🏓 Турнир ${date} (${userNames})`;
         
         await supabaseClient
           .from('pp_tournaments')
@@ -340,7 +494,7 @@ async function checkAndCreateTournaments(){
             created_at: new Date().toISOString()
           }]);
         
-        console.log(`Создан турнир: ${tournamentName}`);
+        console.log(`✅ Создан турнир: ${tournamentName}`);
       }
     }
   } catch(e) {
@@ -430,13 +584,13 @@ async function displayActiveTournaments(){
         </div>
       </div>
       <div style="margin-top:8px;">
-        <div style="color:#94a3b8; font-size:14px;">Участники:</div>
+        <div style="color:#94a3b8; font-size:14px;">🎯 Участники:</div>
         <div class="participant-list">
           ${participants.length > 0 
             ? participants.map(p => 
                 `<span class="participant">${p.pp_users?.login || 'Аноним'}</span>`
               ).join('')
-            : '<span style="color:#94a3b8; font-size:14px;">Пока нет участников</span>'
+            : '<span style="color:#94a3b8; font-size:14px;">😔 Пока нет участников</span>'
           }
         </div>
       </div>
@@ -444,8 +598,8 @@ async function displayActiveTournaments(){
         ? `<div style="margin-top:8px; color:#f87171; font-size:14px;">
              ⚠️ Нужно еще ${3 - participants.length} участника для подтверждения турнира
            </div>`
-        : `<div style="margin-top:8px; color:#22c55e; font-size:14px;">
-             ✅ Турнир подтвержден!
+        : `<div style="margin-top:8px; color:#22c55e; font-size:14px; display: flex; align-items: center; gap: 5px;">
+             ✅ <span>Турнир подтвержден!</span>
            </div>`
       }
     `;
@@ -460,7 +614,7 @@ async function createTournament(){
   const date = document.getElementById('adminTournamentDate').value;
   
   if(!name || !date) {
-    alert('Введите название и дату');
+    alert('⚠️ Введите название и дату турнира!');
     return;
   }
 
@@ -475,7 +629,7 @@ async function createTournament(){
     
     if(error) {
       if(error.code === '23505') { // Ошибка дублирования даты
-        alert('Турнир на эту дату уже существует!');
+        alert('❌ Турнир на эту дату уже существует! Выберите другую дату.');
         return;
       }
       throw error;
@@ -484,11 +638,11 @@ async function createTournament(){
     await loadTournaments();
     document.getElementById('adminTournamentName').value = '';
     document.getElementById('adminTournamentDate').value = '';
-    messageDiv.innerText = 'Турнир создан!';
+    messageDiv.innerText = '✅ Турнир успешно создан!';
     messageDiv.className = 'success';
   } catch(e){
     console.error('Create tournament error:', e);
-    messageDiv.innerText = 'Ошибка: ' + (e.message || 'Неизвестная ошибка');
+    messageDiv.innerText = '❌ Ошибка: ' + (e.message || 'Неизвестная ошибка');
     messageDiv.className = 'error';
   }
 }
@@ -498,7 +652,7 @@ function renderAdminTournamentList(tournaments){
   tournamentAdminListDiv.innerHTML='';
   
   if(!tournaments || tournaments.length === 0) {
-    tournamentAdminListDiv.innerHTML = '<p style="color:#94a3b8">Турниров пока нет</p>';
+    tournamentAdminListDiv.innerHTML = '<p style="color:#94a3b8">🏓 Турниров пока нет</p>';
     return;
   }
   
@@ -510,10 +664,10 @@ function renderAdminTournamentList(tournaments){
     span.innerText = `${t.name} (${t.play_date})`;
     
     const editBtn = document.createElement('button'); 
-    editBtn.innerText='✏️'; 
+    editBtn.innerText='✏️ Редактировать'; 
     editBtn.style.background = '#38bdf8';
     editBtn.onclick = async () => {
-      const newName = prompt('Новое название турнира', t.name);
+      const newName = prompt('✏️ Введите новое название турнира:', t.name);
       if(!newName) return;
       
       try {
@@ -524,15 +678,15 @@ function renderAdminTournamentList(tournaments){
         await loadTournaments();
       } catch(e) {
         console.error('Edit tournament error:', e);
-        alert('Ошибка редактирования');
+        alert('❌ Ошибка редактирования');
       }
     };
     
     const delBtn = document.createElement('button'); 
-    delBtn.innerText='🗑️';
+    delBtn.innerText='🗑️ Удалить';
     delBtn.style.background = '#f87171';
     delBtn.onclick = async () => {
-      if(confirm(`Удалить турнир "${t.name}"?`)){
+      if(confirm(`⚠️ Вы уверены, что хотите удалить турнир "${t.name}"?`)){
         try {
           await supabaseClient
             .from('pp_tournaments')
@@ -541,7 +695,7 @@ function renderAdminTournamentList(tournaments){
           await loadTournaments();
         } catch(e) {
           console.error('Delete tournament error:', e);
-          alert('Ошибка удаления');
+          alert('❌ Ошибка удаления');
         }
       }
     };
@@ -563,13 +717,13 @@ function renderAdminTournamentList(tournaments){
         
         if(users && users.length > 0) {
           const userList = users.map(u => `• ${u.pp_users?.login || `ID: ${u.user_id}`}`).join('\n');
-          alert(`Участники турнира "${t.name}" (${t.play_date}):\n\n${userList}\n\nВсего: ${users.length} человек`);
+          alert(`👥 Участники турнира "${t.name}" (${t.play_date}):\n\n${userList}\n\n🎯 Всего участников: ${users.length}`);
         } else {
-          alert(`На турнир "${t.name}" пока никто не записался`);
+          alert(`😔 На турнир "${t.name}" пока никто не записался`);
         }
       } catch(e) {
         console.error('Get participants error:', e);
-        alert('Ошибка загрузки участников');
+        alert('❌ Ошибка загрузки участников');
       }
     };
     
