@@ -5,1071 +5,767 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Турниры по настольному теннису</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
-    <!-- Supabase будет загружен только если еще не загружен -->
-    <script>
-        if (typeof window.supabaseClient === 'undefined') {
-            var script = document.createElement('script');
-            script.src = 'https://unpkg.com/@supabase/supabase-js@2';
-            script.onload = function() {
-                initApp();
-            };
-            document.head.appendChild(script);
-        } else {
-            document.addEventListener('DOMContentLoaded', function() {
-                initApp();
-            });
-        }
-        
-        function initApp() {
-            // Ждем загрузки страницы
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', main);
-            } else {
-                main();
-            }
-        }
-    </script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 15px;
-            color: #333;
+            padding: 20px;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
-            min-height: calc(100vh - 30px);
         }
 
         header {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 20px 15px;
+            padding: 30px;
             text-align: center;
-            position: relative;
         }
 
         h1 {
-            font-size: 1.8em;
+            font-size: 2.5rem;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            padding-right: 10px;
-            padding-left: 10px;
-        }
-
-        header p {
-            font-size: 0.9em;
-            opacity: 0.9;
-            margin-bottom: 15px;
         }
 
         .user-section {
-            position: static;
-            margin-top: 15px;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            justify-content: space-between;
             align-items: center;
-        }
-
-        @media (min-width: 768px) {
-            .user-section {
-                position: absolute;
-                top: 20px;
-                right: 20px;
-                flex-direction: row;
-                margin-top: 0;
-            }
+            padding: 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
         }
 
         .auth-form {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-            max-width: 300px;
+            gap: 10px;
+            align-items: center;
         }
 
-        @media (min-width: 768px) {
-            .auth-form {
-                flex-direction: row;
-                max-width: none;
-            }
-        }
-
-        .auth-form input {
+        input[type="text"], input[type="password"] {
             padding: 10px 15px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 25px;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            outline: none;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
             transition: all 0.3s;
-            font-size: 14px;
-            width: 100%;
         }
 
-        .auth-form input::placeholder {
-            color: rgba(255,255,255,0.7);
-        }
-
-        .auth-form input:focus {
-            border-color: white;
-            background: rgba(255,255,255,0.2);
-        }
-
-        .auth-buttons {
-            display: flex;
-            gap: 8px;
-            width: 100%;
-        }
-
-        @media (min-width: 768px) {
-            .auth-buttons {
-                width: auto;
-            }
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: #667eea;
+            outline: none;
         }
 
         button {
-            padding: 10px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             border: none;
-            border-radius: 25px;
-            background: white;
-            color: #f5576c;
-            font-weight: bold;
+            padding: 12px 25px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            font-size: 14px;
-            flex: 1;
-        }
-
-        @media (min-width: 768px) {
-            button {
-                padding: 8px 20px;
-                flex: none;
-            }
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
         .main-content {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        @media (min-width: 992px) {
-            .main-content {
-                grid-template-columns: 1fr 300px;
-                gap: 30px;
-                padding: 30px;
-            }
-        }
-
-        .calendar-container {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 12px;
-            border: 2px solid #e9ecef;
-            overflow: hidden;
-        }
-
-        .flatpickr-calendar {
-            max-width: 100% !important;
-            width: 100% !important;
-            margin: 0 auto !important;
-            transform: scale(0.95);
-            transform-origin: center;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            gap: 30px;
         }
 
         @media (min-width: 768px) {
-            .flatpickr-calendar {
-                transform: scale(1);
+            .main-content {
+                flex-direction: row;
             }
         }
 
-        .legend {
-            margin-top: 15px;
-            padding: 12px;
-            background: white;
-            border-radius: 10px;
-            border: 1px solid #dee2e6;
-            font-size: 0.9em;
+        .calendar-section {
+            flex: 1;
+            min-width: 0;
         }
 
-        .legend h3 {
-            font-size: 1.1em;
-            margin-bottom: 10px;
+        .info-section {
+            flex: 0 0 300px;
+        }
+
+        #calendar {
+            width: 100%;
+            overflow-x: auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .calendar-container {
+            overflow-x: auto;
+            max-width: 100%;
+            min-height: 400px;
+        }
+
+        .flatpickr-calendar {
+            margin: 0 auto;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            margin-bottom: 8px;
-            font-size: 0.9em;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
         }
 
         .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-            margin-right: 8px;
-            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
         }
 
-        .available { background-color: #51cf66; }
-        .selected { background-color: #339af0; }
-        .tournament { background-color: #ff6b6b; }
+        .selected-date {
+            background: #4CAF50;
+        }
+
+        .tournament-date {
+            background: #FF9800;
+        }
+
+        .popular-date {
+            background: #2196F3;
+        }
 
         .admin-panel {
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 12px;
-            border: 2px solid #e9ecef;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-top: 20px;
+            display: none;
         }
 
-        .admin-panel h3 {
-            color: #495057;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #dee2e6;
-            font-size: 1.2em;
-        }
-
-        .form-group {
-            margin-bottom: 12px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #495057;
-            font-weight: 500;
-            font-size: 0.9em;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 8px 10px;
-            border: 2px solid #ced4da;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #339af0;
-        }
-
-        .tournament-list {
+        .admin-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             margin-top: 15px;
-            max-height: 250px;
-            overflow-y: auto;
+        }
+
+        .date-info {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .selected-dates-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .date-chip {
+            background: #e3f2fd;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remove-date {
+            cursor: pointer;
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        .tournaments-list {
+            margin-top: 20px;
         }
 
         .tournament-item {
             background: white;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
+            align-items: center;
         }
 
-        .tournament-info h4 {
-            color: #495057;
-            margin-bottom: 4px;
-            font-size: 0.95em;
-        }
-
-        .tournament-info p {
-            color: #868e96;
-            font-size: 0.8em;
-            margin-bottom: 4px;
-        }
-
-        .tournament-actions {
-            display: flex;
-            gap: 5px;
-            margin-top: 5px;
-        }
-
-        .tournament-actions button {
+        .status {
             padding: 5px 10px;
-            font-size: 11px;
-        }
-
-        #userInfo {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            padding: 10px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-        }
-
-        @media (min-width: 768px) {
-            #userInfo {
-                flex-direction: row;
-                width: auto;
-                padding: 0;
-                background: transparent;
-            }
-        }
-
-        #currentUser {
+            border-radius: 15px;
+            font-size: 12px;
             font-weight: bold;
+        }
+
+        .status-planned {
+            background: #4CAF50;
             color: white;
-            text-align: center;
         }
 
-        .status-message {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            left: 15px;
-            padding: 12px 15px;
-            border-radius: 10px;
-            background: white;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            z-index: 1000;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s;
-            font-size: 0.9em;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        @media (min-width: 768px) {
-            .status-message {
-                left: auto;
-                max-width: 300px;
-            }
-        }
-
-        .status-message.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .status-message.success {
-            border-left: 4px solid #51cf66;
-        }
-
-        .status-message.error {
-            border-left: 4px solid #ff6b6b;
-        }
-
-        .admin-only {
-            display: none;
-        }
-
-        .admin-only.show {
-            display: block;
-        }
-
-        .day-with-players {
-            position: relative;
-        }
-
-        .player-count {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            background: #339af0;
+        .status-active {
+            background: #2196F3;
             color: white;
-            font-size: 9px;
-            padding: 1px 4px;
-            border-radius: 50%;
-            min-width: 16px;
-            text-align: center;
-            line-height: 1.2;
         }
 
-        .tournament-day {
-            background: #ff6b6b !important;
-            color: white !important;
-        }
-
-        .tournament-day .player-count {
-            background: white;
-            color: #ff6b6b;
-        }
-
-        .flatpickr-day {
-            font-size: 12px !important;
-        }
-
-        @media (min-width: 768px) {
-            .flatpickr-day {
-                font-size: 14px !important;
-            }
-        }
-
-        .mobile-menu-toggle {
-            display: block;
-            position: absolute;
-            top: 20px;
-            right: 15px;
-            background: none;
-            border: none;
+        .status-completed {
+            background: #9E9E9E;
             color: white;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 100;
         }
 
-        @media (min-width: 768px) {
-            .mobile-menu-toggle {
-                display: none;
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 10px;
+                margin: 10px;
             }
-        }
-        
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 200px;
-            color: #666;
-            font-size: 1.1em;
+            
+            .user-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .auth-form {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            input[type="text"], input[type="password"] {
+                width: 100%;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            #calendar {
+                padding: 10px;
+            }
+            
+            .legend {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
-            <h1>🎯 Турниры по настольному теннису</h1>
-            <p>Выбирайте даты и участвуйте в турнирах!</p>
-            
-            <div class="user-section">
-                <div id="loginForm" class="auth-form">
-                    <input type="text" id="username" placeholder="Логин">
-                    <input type="password" id="password" placeholder="Пароль">
-                    <div class="auth-buttons">
-                        <button id="loginBtn">Войти</button>
-                        <button id="registerBtn">Регистрация</button>
-                    </div>
-                </div>
-                <div id="userInfo" style="display: none;">
-                    <span id="currentUser"></span>
-                    <button id="logoutBtn">Выйти</button>
-                </div>
-            </div>
+            <h1>🏓 Календарь теннисных турниров</h1>
+            <p>Выбирайте даты для игры и участвуйте в турнирах!</p>
         </header>
 
+        <div class="user-section">
+            <div class="user-info">
+                <span id="username">Гость</span>
+            </div>
+            <div class="auth-form">
+                <input type="text" id="login" placeholder="Логин">
+                <input type="password" id="password" placeholder="Пароль">
+                <button onclick="login()">Войти</button>
+                <button onclick="register()" style="background: #4CAF50;">Регистрация</button>
+                <button onclick="logout()" style="background: #f44336; display: none;" id="logoutBtn">Выйти</button>
+            </div>
+        </div>
+
         <div class="main-content">
-            <div class="calendar-container">
-                <div id="calendar" class="loading">Загрузка календаря...</div>
+            <div class="calendar-section">
+                <div class="date-info">
+                    <h3>Выбранные даты:</h3>
+                    <div class="selected-dates-list" id="selectedDatesList"></div>
+                    <button onclick="saveSelectedDates()" style="margin-top: 15px; display: none;" id="saveDatesBtn">Сохранить мои даты</button>
+                </div>
+                
+                <div id="calendar" class="calendar-container">
+                    <!-- Календарь будет здесь -->
+                </div>
+                
                 <div class="legend">
-                    <h3>Обозначения:</h3>
                     <div class="legend-item">
-                        <div class="legend-color available"></div>
-                        <span>Свободные даты для записи</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color selected"></div>
+                        <div class="legend-color selected-date"></div>
                         <span>Дата выбрана вами</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color tournament"></div>
-                        <span>Турнир создан</span>
+                        <div class="legend-color tournament-date"></div>
+                        <span>Турнир назначен</span>
                     </div>
                     <div class="legend-item">
-                        <div class="player-count" style="position:static; display:inline-block; margin-right:8px; margin-top:0;">3</div>
-                        <span>Количество записавшихся на дату</span>
+                        <div class="legend-color popular-date"></div>
+                        <span>3+ человека выбрали эту дату</span>
                     </div>
                 </div>
             </div>
-
-            <div class="admin-panel">
-                <h3>Панель администратора</h3>
-                <div id="adminContent" class="admin-only">
-                    <div class="form-group">
-                        <label>Дата турнира:</label>
-                        <input type="date" id="tournamentDate">
-                    </div>
-                    <div class="form-group">
-                        <label>Название турнира:</label>
-                        <input type="text" id="tournamentName" placeholder="Введите название турнира">
-                    </div>
-                    <div class="form-group">
-                        <label>Тип:</label>
-                        <select id="tournamentType">
-                            <option value="tournament">Турнир</option>
-                            <option value="rating">Игра на рейтинг</option>
-                        </select>
-                    </div>
-                    <button id="createTournamentBtn" style="width: 100%;">Создать турнир</button>
-                    
-                    <div class="tournament-list" id="tournamentsList">
-                        <div class="loading">Загрузка турниров...</div>
+            
+            <div class="info-section">
+                <div class="admin-panel" id="adminPanel">
+                    <h3>Админ-панель</h3>
+                    <div class="admin-controls">
+                        <input type="text" id="tournamentName" placeholder="Название турнира">
+                        <input type="text" id="tournamentDate" placeholder="Дата турнира (YYYY-MM-DD)" class="date-input">
+                        <button onclick="createTournament()">Создать турнир</button>
+                        <button onclick="deleteTournament()" style="background: #f44336;">Удалить турнир</button>
                     </div>
                 </div>
-                <div id="adminLoginPrompt">
-                    <p>Войдите как администратор для доступа к панели управления</p>
+                
+                <div class="tournaments-list">
+                    <h3>Ближайшие турниры:</h3>
+                    <div id="tournamentsList"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="statusMessage" class="status-message"></div>
-
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
+    
     <script>
-        // Основная функция приложения
-        function main() {
-            // Конфигурация Supabase
-            const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE';
-
-            // Инициализация Supabase с уникальным именем
-            if (typeof window.supabaseClient === 'undefined') {
-                window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-            const sb = window.supabaseClient;
-
-            let currentUser = null;
-            let selectedDates = new Set();
-            let allPlayers = {};
-            let tournaments = {};
-            let calendar;
-
-            // Функция показа сообщения
-            function showMessage(message, type = 'success') {
-                const msg = document.getElementById('statusMessage');
-                msg.textContent = message;
-                msg.className = `status-message ${type} show`;
-                setTimeout(() => {
-                    msg.className = 'status-message';
-                }, 3000);
-            }
-
-            // Функции авторизации
-async function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    if (!username || !password) {
-        showMessage('Введите логин и пароль', 'error');
-        return;
-    }
-
-    try {
-        // ИСПОЛЬЗУЕМ ilike ДЛЯ КОРРЕКТНОГО ПОИСКА
-        const { data: user, error } = await supabaseClient
-            .from('pingpong_users')
-            .select('*')
-            .ilike('username', username)  // ← ВАЖНО: используем ilike вместо eq
-            .single();
-
-        if (error || !user) {
-            showMessage('Пользователь не найден', 'error');
-            return;
-        }
-
-        // ПРОВЕРЯЕМ ПАРОЛЬ (простая проверка без crypt)
-        if (user.password_hash === password) {
-            setCurrentUser(user);
-            showMessage(`Добро пожаловать, ${user.username}!`);
-        } else {
-            showMessage('Неверный пароль', 'error');
-        }
-    } catch (error) {
-        console.error('Ошибка входа:', error);
-        showMessage('Ошибка при входе в систему', 'error');
-    }
-}
-
-async function register() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    if (!username || !password) {
-        showMessage('Введите логин и пароль', 'error');
-        return;
-    }
-
-    if (password.length < 4) {
-        showMessage('Пароль должен быть минимум 4 символа', 'error');
-        return;
-    }
-
-    try {
-        // ПРОВЕРЯЕМ, НЕТ ЛИ ТАКОГО ПОЛЬЗОВАТЕЛЯ
-        const { data: existingUser } = await supabaseClient
-            .from('pingpong_users')
-            .select('username')
-            .ilike('username', username)
-            .single();
-
-        if (existingUser) {
-            showMessage('Пользователь с таким логином уже существует', 'error');
-            return;
-        }
-
-        // СОЗДАЕМ НОВОГО ПОЛЬЗОВАТЕЛЯ
-        const { data, error } = await supabaseClient
-            .from('pingpong_users')
-            .insert([{
-                username: username,
-                password_hash: password
-            }])
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Ошибка регистрации:', error);
-            showMessage('Ошибка регистрации: ' + error.message, 'error');
-            return;
-        }
-
-        showMessage('Регистрация успешна!');
-        setCurrentUser(data);
-    } catch (error) {
-        console.error('Ошибка регистрации:', error);
-        showMessage('Ошибка при регистрации', 'error');
-    }
-}
-
-                showMessage('Регистрация успешна!');
-                setCurrentUser(data);
-            }
-
-            function logout() {
-                currentUser = null;
-                selectedDates.clear();
-                updateUI();
-                showMessage('Вы вышли из системы');
-            }
-
-            function setCurrentUser(user) {
-                currentUser = user;
-                document.getElementById('username').value = '';
-                document.getElementById('password').value = '';
-                updateUI();
-                loadData();
-                showMessage(`Добро пожаловать, ${user.username}!`);
-            }
-
-            // Загрузка данных
-            async function loadData() {
-                if (currentUser) {
-                    await loadPlayerDates();
-                    await loadTournaments();
-                    updateCalendar();
-                }
-            }
-
-            async function loadPlayerDates() {
-                try {
-                    const { data, error } = await sb
-                        .from('pingpong_user_dates')
-                        .select(`
-                            date,
-                            user:pingpong_users(username)
-                        `);
-
-                    if (error) throw error;
-
-                    allPlayers = {};
-                    if (data) {
-                        data.forEach(item => {
-                            const dateStr = item.date;
-                            if (!allPlayers[dateStr]) {
-                                allPlayers[dateStr] = [];
-                            }
-                            allPlayers[dateStr].push(item.user.username);
-                        });
-                    }
-                    
-                    // Загружаем даты текущего пользователя
-                    if (currentUser) {
-                        const { data: userDates, error: userError } = await sb
-                            .from('pingpong_user_dates')
-                            .select('date')
-                            .eq('user_id', currentUser.id);
-                        
-                        if (!userError && userDates) {
-                            selectedDates = new Set(userDates.map(d => d.date));
-                        }
-                    }
-                } catch (error) {
-                    console.error('Ошибка загрузки дат:', error);
-                }
-            }
-
-            async function loadTournaments() {
-                try {
-                    const { data, error } = await sb
-                        .from('pingpong_tournaments')
-                        .select('*')
-                        .order('date', { ascending: true });
-
-                    if (error) throw error;
-
-                    tournaments = {};
-                    if (data) {
-                        data.forEach(tournament => {
-                            tournaments[tournament.date] = tournament;
-                        });
-                    }
-                    updateTournamentsList();
-                } catch (error) {
-                    console.error('Ошибка загрузки турниров:', error);
-                }
-            }
-
-            // Работа с календарем
-            function initCalendar() {
-                const calendarEl = document.getElementById('calendar');
-                calendarEl.classList.remove('loading');
-                
-                calendar = flatpickr("#calendar", {
-                    inline: true,
-                    mode: "multiple",
-                    dateFormat: "Y-m-d",
-                    locale: "ru",
-                    minDate: "today",
-                    maxDate: new Date().fp_incr(365),
-                    onChange: function(selectedDates) {
-                        if (!currentUser) {
-                            showMessage('Войдите для выбора дат', 'error');
-                            return;
-                        }
-                        
-                        const newSelected = new Set(selectedDates.map(d => d.toISOString().split('T')[0]));
-                        const added = [...newSelected].filter(d => !selectedDates.has(d));
-                        const removed = [...selectedDates].filter(d => !newSelected.has(d));
-                        
-                        selectedDates = newSelected;
-                        
-                        added.forEach(date => selectDate(date));
-                        removed.forEach(date => deselectDate(date));
-                        
-                        updateCalendar();
-                    }
-                });
-
-                updateCalendar();
-            }
-
-            async function selectDate(date) {
-                try {
-                    const { error } = await sb
-                        .from('pingpong_user_dates')
-                        .insert([{
-                            user_id: currentUser.id,
-                            date: date
-                        }]);
-
-                    if (error) throw error;
-
-                    // Проверяем, нужно ли создать турнир
-                    const playersOnDate = allPlayers[date] || [];
-                    if (playersOnDate.length + 1 >= 3) {
-                        if (!tournaments[date]) {
-                            await createAutoTournament(date);
-                        }
-                    }
-                    await loadPlayerDates();
-                    updateCalendar();
-                } catch (error) {
-                    showMessage('Ошибка при выборе даты: ' + error.message, 'error');
-                }
-            }
-
-            async function deselectDate(date) {
-                try {
-                    const { error } = await sb
-                        .from('pingpong_user_dates')
-                        .delete()
-                        .eq('user_id', currentUser.id)
-                        .eq('date', date);
-
-                    if (error) throw error;
-
-                    await loadPlayerDates();
-                    updateCalendar();
-                } catch (error) {
-                    console.error('Ошибка отмены выбора:', error);
-                }
-            }
-
-            async function createAutoTournament(date) {
-                if (tournaments[date]) return;
-
-                try {
-                    const { data, error } = await sb
-                        .from('pingpong_tournaments')
-                        .insert([{
-                            date: date,
-                            name: `Авто-турнир ${date}`,
-                            type: 'tournament',
-                            created_by: currentUser.id
-                        }])
-                        .select()
-                        .single();
-
-                    if (error) throw error;
-
-                    tournaments[date] = data;
-                    showMessage(`Турнир создан на ${date}!`);
-                    updateTournamentsList();
-                } catch (error) {
-                    console.error('Ошибка создания турнира:', error);
-                }
-            }
-
-            function updateCalendar() {
-                setTimeout(() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    
-                    document.querySelectorAll('.flatpickr-day').forEach(day => {
-                        if (!day.dateObj) return;
-                        
-                        const date = day.dateObj.toISOString().split('T')[0];
-                        day.classList.remove('selected', 'tournament-day', 'day-with-players');
-                        
-                        if (date < today) {
-                            day.classList.add('disabled');
-                            return;
-                        }
-                        
-                        if (selectedDates.has(date)) {
-                            day.classList.add('selected');
-                        }
-                        
-                        if (tournaments[date]) {
-                            day.classList.add('tournament-day');
-                            day.title = tournaments[date].name;
-                        }
-                        
-                        const players = allPlayers[date];
-                        if (players && players.length > 0) {
-                            day.classList.add('day-with-players');
-                            
-                            let countElem = day.querySelector('.player-count');
-                            if (!countElem) {
-                                countElem = document.createElement('span');
-                                countElem.className = 'player-count';
-                                day.appendChild(countElem);
-                            }
-                            countElem.textContent = players.length;
-                        }
-                    });
-                }, 100);
-            }
-
-            // Админ функции
-            async function createTournament() {
-                if (!currentUser || !currentUser.is_admin) {
-                    showMessage('Требуются права администратора', 'error');
-                    return;
-                }
-
-                const date = document.getElementById('tournamentDate').value;
-                const name = document.getElementById('tournamentName').value;
-                const type = document.getElementById('tournamentType').value;
-
-                if (!date || !name) {
-                    showMessage('Заполните все поля', 'error');
-                    return;
-                }
-
-                try {
-                    const { data, error } = await sb
-                        .from('pingpong_tournaments')
-                        .insert([{
-                            date: date,
-                            name: name,
-                            type: type,
-                            created_by: currentUser.id
-                        }])
-                        .select()
-                        .single();
-
-                    if (error) throw error;
-
-                    tournaments[date] = data;
-                    updateCalendar();
-                    updateTournamentsList();
-                    
-                    document.getElementById('tournamentDate').value = '';
-                    document.getElementById('tournamentName').value = '';
-                    
-                    showMessage('Турнир создан!');
-                } catch (error) {
-                    showMessage('Ошибка: ' + error.message, 'error');
-                }
-            }
-
-            async function editTournament(id) {
-                const newName = prompt('Введите новое название турнира:');
-                if (!newName) return;
-
-                try {
-                    const { error } = await sb
-                        .from('pingpong_tournaments')
-                        .update({ name: newName })
-                        .eq('id', id);
-
-                    if (error) throw error;
-
-                    await loadTournaments();
-                    updateCalendar();
-                    showMessage('Турнир обновлен');
-                } catch (error) {
-                    showMessage('Ошибка обновления: ' + error.message, 'error');
-                }
-            }
-
-            async function deleteTournament(id, date) {
-                if (!confirm('Удалить турнир?')) return;
-
-                try {
-                    const { error } = await sb
-                        .from('pingpong_tournaments')
-                        .delete()
-                        .eq('id', id);
-
-                    if (error) throw error;
-
-                    delete tournaments[date];
-                    updateCalendar();
-                    updateTournamentsList();
-                    showMessage('Турнир удален');
-                } catch (error) {
-                    showMessage('Ошибка удаления: ' + error.message, 'error');
-                }
-            }
-
-            function updateTournamentsList() {
-                const list = document.getElementById('tournamentsList');
-                if (!list) return;
-
-                const sortedTournaments = Object.values(tournaments)
-                    .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                if (sortedTournaments.length === 0) {
-                    list.innerHTML = '<div class="tournament-item"><p>Нет созданных турниров</p></div>';
-                    return;
-                }
-
-                list.innerHTML = sortedTournaments.map(t => `
-                    <div class="tournament-item">
-                        <div class="tournament-info">
-                            <h4>${t.name}</h4>
-                            <p>${t.date} (${t.type === 'tournament' ? 'Турнир' : 'Рейтинг'})</p>
-                            <small>Участников: ${allPlayers[t.date] ? allPlayers[t.date].length : 0}</small>
-                        </div>
-                        ${currentUser && currentUser.is_admin ? `
-                            <div class="tournament-actions">
-                                <button onclick="window.app.editTournament('${t.id}')">Ред.</button>
-                                <button onclick="window.app.deleteTournament('${t.id}', '${t.date}')" style="background:#fa5252;color:white;">Удалить</button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `).join('');
-            }
-
-            // Обновление UI
-            function updateUI() {
-                const loginForm = document.getElementById('loginForm');
-                const userInfo = document.getElementById('userInfo');
-                const adminContent = document.getElementById('adminContent');
-                const adminLoginPrompt = document.getElementById('adminLoginPrompt');
-
-                if (currentUser) {
-                    loginForm.style.display = 'none';
-                    userInfo.style.display = 'flex';
-                    document.getElementById('currentUser').textContent = currentUser.username;
-                    
-                    if (currentUser.is_admin) {
-                        adminContent.classList.add('show');
-                        adminLoginPrompt.style.display = 'none';
-                    } else {
-                        adminContent.classList.remove('show');
-                        adminLoginPrompt.style.display = 'block';
-                        adminLoginPrompt.innerHTML = '<p>Доступно только администраторам</p>';
-                    }
-                } else {
-                    loginForm.style.display = 'flex';
-                    userInfo.style.display = 'none';
-                    adminContent.classList.remove('show');
-                    adminLoginPrompt.style.display = 'block';
-                    adminLoginPrompt.innerHTML = '<p>Войдите как администратор для доступа к панели управления</p>';
-                }
-
-                updateCalendar();
-            }
-
-            // Экспортируем функции в глобальную область видимости
-            window.app = {
-                login,
-                register,
-                logout,
-                createTournament,
-                editTournament,
-                deleteTournament
-            };
-
-            // Инициализация событий
-            document.getElementById('loginBtn').addEventListener('click', login);
-            document.getElementById('registerBtn').addEventListener('click', register);
-            document.getElementById('logoutBtn').addEventListener('click', logout);
-            document.getElementById('createTournamentBtn').addEventListener('click', createTournament);
-
-            // Мобильное меню
-            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-            if (mobileMenuToggle) {
-                mobileMenuToggle.addEventListener('click', function() {
-                    const userSection = document.querySelector('.user-section');
-                    userSection.style.display = userSection.style.display === 'none' ? 'flex' : 'none';
-                });
-            }
-
-            // Инициализация календаря
+        // Конфигурация Supabase
+        const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Переменные состояния
+        let currentUser = null;
+        let selectedDates = [];
+        let tournaments = [];
+        let userSelections = [];
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
             initCalendar();
-            updateUI();
+            loadData();
+        });
+
+        // Проверка авторизации
+        async function checkAuth() {
+            const userData = localStorage.getItem('pingpong_user');
+            if (userData) {
+                currentUser = JSON.parse(userData);
+                updateUIForUser();
+            }
+        }
+
+        // Обновление UI для пользователя
+        function updateUIForUser() {
+            const usernameEl = document.getElementById('username');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const saveDatesBtn = document.getElementById('saveDatesBtn');
+            const adminPanel = document.getElementById('adminPanel');
             
-            // Проверяем сохраненного пользователя
-            const savedUser = localStorage.getItem('pingpong_user');
-            if (savedUser) {
-                try {
-                    currentUser = JSON.parse(savedUser);
-                    updateUI();
-                    loadData();
-                } catch (e) {
-                    console.error('Ошибка загрузки пользователя:', e);
+            if (currentUser) {
+                usernameEl.textContent = currentUser.username;
+                logoutBtn.style.display = 'block';
+                saveDatesBtn.style.display = 'block';
+                
+                if (currentUser.username === 'Admin') {
+                    adminPanel.style.display = 'block';
                 }
+            } else {
+                usernameEl.textContent = 'Гость';
+                logoutBtn.style.display = 'none';
+                saveDatesBtn.style.display = 'none';
+                adminPanel.style.display = 'none';
+            }
+        }
+
+        // Вход в систему
+        async function login() {
+            const login = document.getElementById('login').value;
+            const password = document.getElementById('password').value;
+            
+            if (!login || !password) {
+                alert('Введите логин и пароль');
+                return;
+            }
+            
+            // Проверка админского аккаунта
+            if (login === 'Admin' && password === '13311331') {
+                currentUser = { id: 1, username: 'Admin', isAdmin: true };
+                localStorage.setItem('pingpong_user', JSON.stringify(currentUser));
+                updateUIForUser();
+                alert('Добро пожаловать, Admin!');
+                return;
+            }
+            
+            // Проверка обычных пользователей
+            const { data: users } = await supabase
+                .from('pingpong_users')
+                .select('*')
+                .eq('username', login)
+                .eq('password', password)
+                .single();
+            
+            if (users) {
+                currentUser = users;
+                localStorage.setItem('pingpong_user', JSON.stringify(currentUser));
+                updateUIForUser();
+                alert('Вход выполнен успешно!');
+                loadUserSelections();
+            } else {
+                alert('Неверный логин или пароль');
+            }
+        }
+
+        // Регистрация
+        async function register() {
+            const login = document.getElementById('login').value;
+            const password = document.getElementById('password').value;
+            
+            if (!login || !password) {
+                alert('Введите логин и пароль');
+                return;
+            }
+            
+            // Проверка существующего пользователя
+            const { data: existingUser } = await supabase
+                .from('pingpong_users')
+                .select('*')
+                .eq('username', login)
+                .single();
+            
+            if (existingUser) {
+                alert('Пользователь с таким логином уже существует');
+                return;
+            }
+            
+            // Создание нового пользователя
+            const { data, error } = await supabase
+                .from('pingpong_users')
+                .insert([{ username: login, password: password }])
+                .select()
+                .single();
+            
+            if (!error) {
+                currentUser = data;
+                localStorage.setItem('pingpong_user', JSON.stringify(currentUser));
+                updateUIForUser();
+                alert('Регистрация успешна!');
+            } else {
+                alert('Ошибка регистрации: ' + error.message);
+            }
+        }
+
+        // Выход из системы
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('pingpong_user');
+            updateUIForUser();
+            selectedDates = [];
+            updateSelectedDatesList();
+        }
+
+        // Инициализация календаря
+        function initCalendar() {
+            const calendar = flatpickr("#calendar", {
+                inline: true,
+                mode: "multiple",
+                dateFormat: "Y-m-d",
+                locale: "ru",
+                minDate: "today",
+                maxDate: new Date().fp_incr(365),
+                onChange: function(selectedDates, dateStr, instance) {
+                    if (currentUser) {
+                        selectedDates = selectedDates.map(date => date.toISOString().split('T')[0]);
+                        updateSelectedDatesList();
+                    } else {
+                        alert('Пожалуйста, войдите в систему чтобы выбирать даты');
+                        instance.clear();
+                    }
+                },
+                onDayCreate: function(dObj, dStr, fp, dayElem) {
+                    const dateStr = dayElem.dateObj.toISOString().split('T')[0];
+                    
+                    // Проверка выбранных дат текущим пользователем
+                    if (selectedDates.includes(dateStr)) {
+                        dayElem.classList.add('selected-date');
+                    }
+                    
+                    // Проверка турниров
+                    const tournament = tournaments.find(t => t.date === dateStr);
+                    if (tournament) {
+                        dayElem.classList.add('tournament-date');
+                        dayElem.title = `Турнир: ${tournament.name}`;
+                    }
+                    
+                    // Проверка популярных дат
+                    const dateSelections = userSelections.filter(s => s.date === dateStr);
+                    if (dateSelections.length >= 3) {
+                        dayElem.classList.add('popular-date');
+                        dayElem.title = `Эту дату выбрали ${dateSelections.length} человек`;
+                    }
+                }
+            });
+        }
+
+        // Обновление списка выбранных дат
+        function updateSelectedDatesList() {
+            const listEl = document.getElementById('selectedDatesList');
+            listEl.innerHTML = '';
+            
+            selectedDates.forEach(date => {
+                const dateChip = document.createElement('div');
+                dateChip.className = 'date-chip';
+                dateChip.innerHTML = `
+                    ${date}
+                    <span class="remove-date" onclick="removeDate('${date}')">×</span>
+                `;
+                listEl.appendChild(dateChip);
+            });
+            
+            // Обновляем календарь
+            const calendar = document.querySelector('.flatpickr-calendar');
+            if (calendar) {
+                calendar.querySelectorAll('.flatpickr-day').forEach(day => {
+                    day.classList.remove('selected-date');
+                });
+            }
+        }
+
+        // Удаление даты из выбранных
+        function removeDate(date) {
+            selectedDates = selectedDates.filter(d => d !== date);
+            updateSelectedDatesList();
+        }
+
+        // Сохранение выбранных дат
+        async function saveSelectedDates() {
+            if (!currentUser) return;
+            
+            // Удаляем старые выборы пользователя
+            await supabase
+                .from('pingpong_user_selections')
+                .delete()
+                .eq('user_id', currentUser.id);
+            
+            // Сохраняем новые выборы
+            const selections = selectedDates.map(date => ({
+                user_id: currentUser.id,
+                date: date,
+                username: currentUser.username
+            }));
+            
+            const { error } = await supabase
+                .from('pingpong_user_selections')
+                .insert(selections);
+            
+            if (!error) {
+                alert('Даты сохранены успешно!');
+                loadUserSelections();
+            } else {
+                alert('Ошибка сохранения: ' + error.message);
+            }
+        }
+
+        // Загрузка данных
+        async function loadData() {
+            await Promise.all([
+                loadTournaments(),
+                loadUserSelections()
+            ]);
+            
+            if (currentUser) {
+                loadUserDates();
+            }
+        }
+
+        // Загрузка турниров
+        async function loadTournaments() {
+            const { data, error } = await supabase
+                .from('pingpong_tournaments')
+                .select('*')
+                .order('date', { ascending: true });
+            
+            if (!error) {
+                tournaments = data;
+                updateTournamentsList();
+            }
+        }
+
+        // Загрузка выборов пользователей
+        async function loadUserSelections() {
+            const { data, error } = await supabase
+                .from('pingpong_user_selections')
+                .select('*');
+            
+            if (!error) {
+                userSelections = data;
+                checkForAutoTournaments();
+            }
+        }
+
+        // Загрузка дат текущего пользователя
+        async function loadUserDates() {
+            const { data, error } = await supabase
+                .from('pingpong_user_selections')
+                .select('date')
+                .eq('user_id', currentUser.id);
+            
+            if (!error && data) {
+                selectedDates = data.map(item => item.date);
+                updateSelectedDatesList();
+            }
+        }
+
+        // Проверка на автоматическое создание турниров
+        async function checkForAutoTournaments() {
+            // Группируем выборы по дате
+            const dateGroups = {};
+            userSelections.forEach(selection => {
+                if (!dateGroups[selection.date]) {
+                    dateGroups[selection.date] = [];
+                }
+                dateGroups[selection.date].push(selection.user_id);
+            });
+            
+            // Проверяем каждую дату
+            for (const [date, userIds] of Object.entries(dateGroups)) {
+                if (userIds.length >= 3) {
+                    // Проверяем, есть ли уже турнир на эту дату
+                    const existingTournament = tournaments.find(t => t.date === date);
+                    if (!existingTournament) {
+                        // Автоматически создаем турнир
+                        await createAutoTournament(date, userIds.length);
+                    }
+                }
+            }
+        }
+
+        // Создание автоматического турнира
+        async function createAutoTournament(date, participantsCount) {
+            const tournamentName = `Авто-турнир ${date} (${participantsCount} участников)`;
+            
+            const { error } = await supabase
+                .from('pingpong_tournaments')
+                .insert([{
+                    name: tournamentName,
+                    date: date,
+                    is_auto: true,
+                    status: 'planned'
+                }]);
+            
+            if (!error) {
+                loadTournaments();
+                alert(`Автоматически создан турнир на ${date}!`);
+            }
+        }
+
+        // Обновление списка турниров
+        function updateTournamentsList() {
+            const listEl = document.getElementById('tournamentsList');
+            listEl.innerHTML = '';
+            
+            tournaments.slice(0, 10).forEach(tournament => {
+                const tournamentEl = document.createElement('div');
+                tournamentEl.className = 'tournament-item';
+                tournamentEl.innerHTML = `
+                    <div>
+                        <strong>${tournament.name}</strong><br>
+                        <small>${tournament.date}</small>
+                    </div>
+                    <div class="status status-${tournament.status}">
+                        ${tournament.status === 'planned' ? 'Запланирован' : 
+                          tournament.status === 'active' ? 'Активен' : 'Завершен'}
+                    </div>
+                `;
+                listEl.appendChild(tournamentEl);
+            });
+        }
+
+        // Создание турнира (админ)
+        async function createTournament() {
+            if (!currentUser || currentUser.username !== 'Admin') {
+                alert('Только администратор может создавать турниры');
+                return;
+            }
+            
+            const name = document.getElementById('tournamentName').value;
+            const date = document.getElementById('tournamentDate').value;
+            
+            if (!name || !date) {
+                alert('Заполните все поля');
+                return;
+            }
+            
+            const { error } = await supabase
+                .from('pingpong_tournaments')
+                .insert([{
+                    name: name,
+                    date: date,
+                    is_auto: false,
+                    status: 'planned'
+                }]);
+            
+            if (!error) {
+                alert('Турнир создан успешно!');
+                document.getElementById('tournamentName').value = '';
+                document.getElementById('tournamentDate').value = '';
+                loadTournaments();
+            } else {
+                alert('Ошибка создания: ' + error.message);
+            }
+        }
+
+        // Удаление турнира (админ)
+        async function deleteTournament() {
+            if (!currentUser || currentUser.username !== 'Admin') {
+                alert('Только администратор может удалять турниры');
+                return;
+            }
+            
+            const date = document.getElementById('tournamentDate').value;
+            
+            if (!date) {
+                alert('Введите дату турнира для удаления');
+                return;
+            }
+            
+            const { error } = await supabase
+                .from('pingpong_tournaments')
+                .delete()
+                .eq('date', date);
+            
+            if (!error) {
+                alert('Турнир удален успешно!');
+                document.getElementById('tournamentDate').value = '';
+                loadTournaments();
+            } else {
+                alert('Ошибка удаления: ' + error.message);
             }
         }
     </script>
