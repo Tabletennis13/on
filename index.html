@@ -45,28 +45,6 @@ button:hover { transform: scale(1.05); }
 </div>
 
 <h2>Выберите даты</h2>
-
-<!-- Блок описания для гостей -->
-<div id="guestInfo" style="
-  background:#1e293b; 
-  padding:10px; 
-  border-radius:8px; 
-  margin-bottom:15px; 
-  font-size:14px; 
-  color:#e2e8f0;
-  opacity:0;
-  transform: translateY(10px);
-  transition: opacity 0.8s, transform 0.8s;
-">
-  <strong>Добро пожаловать!</strong> 🏓<br>
-  Выбирайте <strong>дни, когда вы готовы играть</strong> в календаре ниже.<br>
-  Если <strong>3 или более игроков</strong> выберут один и тот же день, <strong>турнир создаётся автоматически</strong>!<br>
-  Все выбранные даты и уже сформированные турниры отображаются разными цветами:<br>
-  <span style="background:#22c55e; color:black; padding:2px 6px; border-radius:4px;">Выбранная дата</span> – ваши дни<br>
-  <span style="background:#facc15; color:black; padding:2px 6px; border-radius:4px;">Турнир</span> – подтверждённые турниры<br>
-  Не забывайте <strong>обновлять страницу</strong>, чтобы видеть новые турнирные дни и отметки других игроков.
-</div>
-
 <div id="calendar" class="calendar"></div>
 <button onclick="submitDates()">Подтвердить даты</button>
 <div style="margin-top:10px; font-size:14px;">
@@ -109,47 +87,509 @@ let selectedDates = [];
 let allTournaments = [];
 
 // --- Авторизация / регистрация ---
-async function auth(){ /* ... остальной код auth ... */ }
+async function auth(){
+  const loginVal = loginInput.value.trim();
+  const passVal = passwordInput.value.trim();
+  messageDiv.innerText = '';
+  messageDiv.className = '';
+
+  if(!loginVal || !passVal){ 
+    messageDiv.innerText = 'Введите логин и пароль';
+    messageDiv.className = 'error';
+    return;
+  }
+
+  if(!/^[a-zA-Z0-9]+$/.test(loginVal) || !/^[a-zA-Z0-9]+$/.test(passVal)){
+    messageDiv.innerText = 'Логин и пароль должны быть только латиница/цифры';
+    messageDiv.className = 'error';
+    return;
+  }
+
+  try {
+    // Сначала пробуем найти пользователя
+    const {data: existingUser, error: findError} = await supabaseClient
+      .from('pp_users')
+      .select('*')
+      .eq('login', loginVal);
+
+    if(findError) throw findError;
+
+    let foundUser = null;
+    
+    if(existingUser && existingUser.length > 0) {
+      // Пользователь существует - проверяем пароль
+      foundUser = existingUser.find(u => u.password === passVal);
+      if(!foundUser) {
+        messageDiv.innerText = 'Неверный пароль';
+        messageDiv.className = 'error';
+        return;
+      }
+    } else {
+      // Регистрируем нового пользователя
+      const {data: newUser, error: insertError} = await supabaseClient
+        .from('pp_users')
+        .insert([{login: loginVal, password: passVal}])
+        .select()
+        .single();
+      
+      if(insertError) {
+        // Если ошибка из-за дубликата (параллельная регистрация)
+        const {data: retryUser} = await supabaseClient
+          .from('pp_users')
+          .select('*')
+          .eq('login', loginVal)
+          .single();
+        
+        if(retryUser && retryUser.password === passVal) {
+          foundUser = retryUser;
+        } else {
+          throw new Error('Ошибка регистрации');
+        }
+      } else {
+        foundUser = newUser;
+      }
+      
+      messageDiv.innerText = 'Регистрация выполнена!';
+      messageDiv.className = 'success';
+    }
+
+    user = foundUser;
+    messageDiv.innerText = 'Вход выполнен! Добро пожаловать, ' + user.login;
+    messageDiv.className = 'success';
+    
+    buildCalendar();
+    await loadTournaments();
+    await loadUserSelectedDates();
+    
+    if(user.login.toLowerCase() === 'admin') {
+      adminPanelDiv.style.display='block';
+    }
+
+  } catch(e){
+    console.error('Auth error:', e);
+    messageDiv.innerText = 'Ошибка: ' + (e.message || 'Неизвестная ошибка');
+    messageDiv.className = 'error';
+  }
+}
 
 // --- Календарь ---
-function buildCalendar(){ /* ... остальной код buildCalendar ... */ }
+function buildCalendar(){
+  calendarDiv.innerHTML = '';
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  // Заголовки дней недели
+  const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  for(let i = 0; i < 7; i++) {
+    const dayHeader = document.createElement('div');
+    dayHeader.innerText = daysOfWeek[i];
+    dayHeader.style.fontWeight = 'bold';
+    dayHeader.style.color = '#94a3b8';
+    calendarDiv.appendChild(dayHeader);
+  }
+
+  // Пустые ячейки для выравнивания
+  const startOffset = (firstDay === 0 ? 6 : firstDay - 1);
+  for(let i = 0; i < startOffset; i++){
+    calendarDiv.appendChild(document.createElement('div'));
+  }
+
+  for(let d = 1; d <= daysInMonth; d++){
+    const day = document.createElement('div');
+    day.className = 'day';
+    day.innerText = d;
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    day.dataset.date = dateStr;
+    day.onclick = () => {
+      if(selectedDates.includes(dateStr)){
+        selectedDates = selectedDates.filter(x => x !== dateStr);
+        day.classList.remove('selected');
+      } else {
+        selectedDates.push(dateStr);
+        day.classList.add('selected');
+      }
+    }
+    calendarDiv.appendChild(day);
+  }
+}
 
 // --- Загрузка выбранных пользователем дат ---
-async function loadUserSelectedDates(){ /* ... */ }
+async function loadUserSelectedDates(){
+  if(!user) return;
+  
+  try {
+    const {data: userDates, error} = await supabaseClient
+      .from('pp_user_dates')
+      .select('selected_date')
+      .eq('user_id', user.id);
+    
+    if(error) throw error;
+    
+    if(userDates && userDates.length > 0) {
+      selectedDates = userDates.map(d => d.selected_date);
+      
+      // Помечаем выбранные даты в календаре
+      selectedDates.forEach(dateStr => {
+        const dayDiv = calendarDiv.querySelector(`[data-date="${dateStr}"]`);
+        if(dayDiv) {
+          dayDiv.classList.add('selected');
+        }
+      });
+    }
+  } catch(e) {
+    console.error('Load user dates error:', e);
+  }
+}
 
 // --- Подтверждение выбранных дат ---
-async function submitDates(){ /* ... */ }
+async function submitDates(){
+  if(!user) {
+    alert('Сначала войдите!');
+    return;
+  }
+
+  if(selectedDates.length === 0) {
+    alert('Выберите хотя бы одну дату!');
+    return;
+  }
+
+  try{
+    // Удаляем старые выборы пользователя
+    await supabaseClient
+      .from('pp_user_dates')
+      .delete()
+      .eq('user_id', user.id);
+
+    // Добавляем новые выборы
+    const dateInserts = selectedDates.map(date => ({
+      user_id: user.id,
+      selected_date: date
+    }));
+
+    const {error} = await supabaseClient
+      .from('pp_user_dates')
+      .insert(dateInserts);
+
+    if(error) throw error;
+
+    messageDiv.innerText = 'Даты сохранены! Проверяем возможность создания турниров...';
+    messageDiv.className = 'success';
+    
+    // Проверяем и создаем турниры автоматически
+    await checkAndCreateTournaments();
+    await loadTournaments();
+    
+  } catch(e){
+    console.error('Submit dates error:', e);
+    messageDiv.innerText = 'Ошибка сохранения дат: ' + (e.message || 'Неизвестная ошибка');
+    messageDiv.className = 'error';
+  }
+}
 
 // --- Проверка и создание турниров автоматически ---
-async function checkAndCreateTournaments(){ /* ... */ }
+async function checkAndCreateTournaments(){
+  try {
+    // Получаем все выбранные даты со всеми пользователями
+    const {data: allDates, error} = await supabaseClient
+      .from('pp_user_dates')
+      .select('selected_date, user_id');
+    
+    if(error) throw error;
+
+    // Группируем по датам
+    const dateCount = {};
+    const dateUsers = {};
+    
+    allDates.forEach(d => {
+      dateCount[d.selected_date] = (dateCount[d.selected_date] || 0) + 1;
+      if(!dateUsers[d.selected_date]) {
+        dateUsers[d.selected_date] = [];
+      }
+      dateUsers[d.selected_date].push(d.user_id);
+    });
+
+    // Получаем существующие турниры
+    const {data: existingTournaments} = await supabaseClient
+      .from('pp_tournaments')
+      .select('play_date');
+
+    const existingDates = existingTournaments ? existingTournaments.map(t => t.play_date) : [];
+
+    // Проверяем каждую дату
+    for(const [date, count] of Object.entries(dateCount)){
+      if(count >= 3 && !existingDates.includes(date)){
+        // Получаем имена пользователей для названия турнира
+        const userIds = dateUsers[date];
+        const {data: users} = await supabaseClient
+          .from('pp_users')
+          .select('login')
+          .in('id', userIds)
+          .limit(3);
+        
+        const userNames = users ? users.map(u => u.login).join(', ') : '';
+        const tournamentName = `Турнир ${date} (${userNames})`;
+        
+        await supabaseClient
+          .from('pp_tournaments')
+          .insert([{
+            play_date: date,
+            name: tournamentName,
+            created_at: new Date().toISOString()
+          }]);
+        
+        console.log(`Создан турнир: ${tournamentName}`);
+      }
+    }
+  } catch(e) {
+    console.error('Check tournaments error:', e);
+  }
+}
 
 // --- Загрузка турниров ---
-async function loadTournaments(){ /* ... */ }
+async function loadTournaments(){
+  try {
+    const {data: tournaments, error} = await supabaseClient
+      .from('pp_tournaments')
+      .select('*')
+      .order('play_date', {ascending: true});
+    
+    if(error) throw error;
+
+    allTournaments = tournaments || [];
+    
+    // Обновляем календарь
+    const days = calendarDiv.querySelectorAll('.day');
+    days.forEach(day => day.classList.remove('tournament'));
+
+    if(allTournaments.length > 0) {
+      allTournaments.forEach(t => {
+        const dayDiv = calendarDiv.querySelector(`[data-date="${t.play_date}"]`);
+        if(dayDiv) {
+          dayDiv.classList.add('tournament');
+          dayDiv.title = t.name;
+        }
+      });
+      
+      // Показываем список активных турниров
+      displayActiveTournaments();
+    }
+    
+    // Обновляем админ-список
+    renderAdminTournamentList(allTournaments);
+    
+  } catch(e) {
+    console.error('Load tournaments error:', e);
+  }
+}
 
 // --- Показ активных турниров ---
-async function displayActiveTournaments(){ /* ... */ }
+async function displayActiveTournaments(){
+  if(!allTournaments || allTournaments.length === 0) {
+    activeTournamentsDiv.style.display = 'none';
+    return;
+  }
+  
+  activeTournamentsDiv.style.display = 'block';
+  tournamentsListDiv.innerHTML = '';
+  
+  // Сортируем по дате (ближайшие первыми)
+  const sortedTournaments = [...allTournaments].sort((a, b) => 
+    new Date(a.play_date) - new Date(b.play_date)
+  );
+  
+  for(const tournament of sortedTournaments){
+    const tournamentDiv = document.createElement('div');
+    tournamentDiv.style.marginBottom = '15px';
+    tournamentDiv.style.padding = '10px';
+    tournamentDiv.style.backgroundColor = '#1e293b';
+    tournamentDiv.style.borderRadius = '8px';
+    tournamentDiv.style.borderLeft = '4px solid #facc15';
+    
+    // Получаем участников турнира
+    const {data: participantsData} = await supabaseClient
+      .from('pp_user_dates')
+      .select(`
+        user_id,
+        pp_users!inner(login)
+      `)
+      .eq('selected_date', tournament.play_date);
+    
+    const participants = participantsData || [];
+    
+    tournamentDiv.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong style="color:#facc15">${tournament.name}</strong>
+          <div style="color:#94a3b8; font-size:14px;">📅 ${tournament.play_date}</div>
+        </div>
+        <div style="background:#facc15; color:black; padding:3px 8px; border-radius:4px; font-weight:bold;">
+          👥 ${participants.length}
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <div style="color:#94a3b8; font-size:14px;">Участники:</div>
+        <div class="participant-list">
+          ${participants.length > 0 
+            ? participants.map(p => 
+                `<span class="participant">${p.pp_users?.login || 'Аноним'}</span>`
+              ).join('')
+            : '<span style="color:#94a3b8; font-size:14px;">Пока нет участников</span>'
+          }
+        </div>
+      </div>
+      ${participants.length < 3 
+        ? `<div style="margin-top:8px; color:#f87171; font-size:14px;">
+             ⚠️ Нужно еще ${3 - participants.length} участника для подтверждения турнира
+           </div>`
+        : `<div style="margin-top:8px; color:#22c55e; font-size:14px;">
+             ✅ Турнир подтвержден!
+           </div>`
+      }
+    `;
+    
+    tournamentsListDiv.appendChild(tournamentDiv);
+  }
+}
 
 // --- Админка: создать турнир ---
-async function createTournament(){ /* ... */ }
+async function createTournament(){
+  const name = document.getElementById('adminTournamentName').value.trim();
+  const date = document.getElementById('adminTournamentDate').value;
+  
+  if(!name || !date) {
+    alert('Введите название и дату');
+    return;
+  }
+
+  try{
+    const {error} = await supabaseClient
+      .from('pp_tournaments')
+      .insert([{
+        name: name,
+        play_date: date,
+        created_at: new Date().toISOString()
+      }]);
+    
+    if(error) {
+      if(error.code === '23505') { // Ошибка дублирования даты
+        alert('Турнир на эту дату уже существует!');
+        return;
+      }
+      throw error;
+    }
+    
+    await loadTournaments();
+    document.getElementById('adminTournamentName').value = '';
+    document.getElementById('adminTournamentDate').value = '';
+    messageDiv.innerText = 'Турнир создан!';
+    messageDiv.className = 'success';
+  } catch(e){
+    console.error('Create tournament error:', e);
+    messageDiv.innerText = 'Ошибка: ' + (e.message || 'Неизвестная ошибка');
+    messageDiv.className = 'error';
+  }
+}
 
 // --- Админка: список турниров с редактированием/удалением ---
-function renderAdminTournamentList(tournaments){ /* ... */ }
+function renderAdminTournamentList(tournaments){
+  tournamentAdminListDiv.innerHTML='';
+  
+  if(!tournaments || tournaments.length === 0) {
+    tournamentAdminListDiv.innerHTML = '<p style="color:#94a3b8">Турниров пока нет</p>';
+    return;
+  }
+  
+  tournaments.forEach(t => {
+    const div = document.createElement('div');
+    div.className='tournament-item';
+    
+    const span = document.createElement('span');
+    span.innerText = `${t.name} (${t.play_date})`;
+    
+    const editBtn = document.createElement('button'); 
+    editBtn.innerText='✏️'; 
+    editBtn.style.background = '#38bdf8';
+    editBtn.onclick = async () => {
+      const newName = prompt('Новое название турнира', t.name);
+      if(!newName) return;
+      
+      try {
+        await supabaseClient
+          .from('pp_tournaments')
+          .update({name: newName})
+          .eq('id', t.id);
+        await loadTournaments();
+      } catch(e) {
+        console.error('Edit tournament error:', e);
+        alert('Ошибка редактирования');
+      }
+    };
+    
+    const delBtn = document.createElement('button'); 
+    delBtn.innerText='🗑️';
+    delBtn.style.background = '#f87171';
+    delBtn.onclick = async () => {
+      if(confirm(`Удалить турнир "${t.name}"?`)){
+        try {
+          await supabaseClient
+            .from('pp_tournaments')
+            .delete()
+            .eq('id', t.id);
+          await loadTournaments();
+        } catch(e) {
+          console.error('Delete tournament error:', e);
+          alert('Ошибка удаления');
+        }
+      }
+    };
+    
+    const participantsBtn = document.createElement('button'); 
+    participantsBtn.innerText='👥 Участники';
+    participantsBtn.style.background = '#22c55e';
+    participantsBtn.onclick = async () => {
+      try {
+        const {data: users, error} = await supabaseClient
+          .from('pp_user_dates')
+          .select(`
+            user_id,
+            pp_users!inner(login)
+          `)
+          .eq('selected_date', t.play_date);
+        
+        if(error) throw error;
+        
+        if(users && users.length > 0) {
+          const userList = users.map(u => `• ${u.pp_users?.login || `ID: ${u.user_id}`}`).join('\n');
+          alert(`Участники турнира "${t.name}" (${t.play_date}):\n\n${userList}\n\nВсего: ${users.length} человек`);
+        } else {
+          alert(`На турнир "${t.name}" пока никто не записался`);
+        }
+      } catch(e) {
+        console.error('Get participants error:', e);
+        alert('Ошибка загрузки участников');
+      }
+    };
+    
+    div.appendChild(span); 
+    div.appendChild(editBtn); 
+    div.appendChild(participantsBtn);
+    div.appendChild(delBtn);
+    tournamentAdminListDiv.appendChild(div);
+  });
+}
 
-// --- Анимация блока гостей ---
+// Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', () => {
   buildCalendar();
+  // Устанавливаем сегодняшнюю дату в поле админки
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('adminTournamentDate').value = today;
   document.getElementById('adminTournamentDate').min = today;
   
-  // Появление блока с инструкцией
-  const guestInfo = document.getElementById('guestInfo');
-  setTimeout(() => {
-    guestInfo.style.opacity = '1';
-    guestInfo.style.transform = 'translateY(0)';
-  }, 100);
-
-  // Загружаем турниры сразу
+  // Загружаем турниры сразу (без входа)
   loadTournaments();
 });
 </script>
