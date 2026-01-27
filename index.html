@@ -43,9 +43,10 @@ button:hover { transform: scale(1.05); }
 
 <script>
 const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRyd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// Создаём клиент только один раз
+window.supabase = window.supabase || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const loginInput = document.getElementById('login')
 const passwordInput = document.getElementById('password')
@@ -74,7 +75,7 @@ async function auth(){
     .eq('password', passVal)
     .single()
 
-  if(error && error.code !== 'PGRST116'){ // PGRST116 = no rows
+  if(error && error.code !== 'PGRST116'){ 
     messageDiv.innerText = 'Ошибка при авторизации: '+error.message
     messageDiv.className = 'error'
     return
@@ -101,7 +102,6 @@ async function auth(){
     messageDiv.className = 'success'
   }
 
-  // загружаем турниры после входа
   loadTournaments()
 }
 
