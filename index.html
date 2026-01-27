@@ -36,12 +36,15 @@ button:hover { transform: scale(1.05); }
 <h2>Выберите даты</h2>
 <div id="calendar" class="calendar"></div>
 <button onclick="submitDates()">Подтвердить даты</button>
+<div style="margin-top:10px; font-size:14px;">
+<span style="background:#22c55e; color:black; padding:2px 6px; border-radius:4px;">Выбранная дата</span>
+<span style="background:#facc15; color:black; padding:2px 6px; border-radius:4px;">Турнир</span>
+</div>
 </div>
 
 <script>
 const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE';
-
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const loginInput = document.getElementById('login');
@@ -65,7 +68,7 @@ async function auth(){
     return;
   }
 
-  // Только ASCII для логина и пароля
+  // Только ASCII
   if(!/^[\x20-\x7E]+$/.test(loginVal) || !/^[\x20-\x7E]+$/.test(passVal)){
     messageDiv.innerText = 'Логин и пароль должны быть только латиница/цифры';
     messageDiv.className = 'error';
@@ -76,9 +79,11 @@ async function auth(){
     const {data, error} = await supabaseClient.from('pp_users')
       .select('*')
       .eq('login', loginVal);
+
     if(error) throw error;
 
     let foundUser = data.find(u => u.password === passVal);
+
     if(!foundUser){
       // Регистрация нового пользователя
       const {data: newUser, error: insertError} = await supabaseClient
@@ -94,7 +99,7 @@ async function auth(){
 
     user = foundUser;
     buildCalendar();
-    loadTournaments();
+    await loadTournaments();
 
   } catch(e){
     console.error(e);
@@ -147,7 +152,7 @@ async function submitDates(){
     messageDiv.innerText = 'Даты отправлены!';
     messageDiv.className = 'success';
     await checkTournaments();
-    loadTournaments();
+    await loadTournaments();
   } catch(e){
     console.error(e);
     messageDiv.innerText = 'Ошибка отправки дат: '+e.message;
@@ -157,7 +162,9 @@ async function submitDates(){
 
 // --- Авто-турниры ---
 async function checkTournaments(){
-  const {data: allDates} = await supabaseClient.from('pp_user_dates').select('*');
+  const {data: allDates, error} = await supabaseClient.from('pp_user_dates').select('*');
+  if(error){ console.error(error); return; }
+
   const dateCount = {};
   allDates.forEach(d=>{ dateCount[d.selected_date] = (dateCount[d.selected_date]||0)+1; });
 
@@ -167,7 +174,6 @@ async function checkTournaments(){
       const {data: existing} = await supabaseClient.from('pp_tournaments')
         .select('*').eq('play_date', date);
       if(existing.length===0){
-        // Отправляем дату в формате YYYY-MM-DD
         await supabaseClient.from('pp_tournaments').insert({
           play_date: date,
           name: `Турнир ${date}`
@@ -179,7 +185,9 @@ async function checkTournaments(){
 
 // --- Загрузка турниров ---
 async function loadTournaments(){
-  const {data: tournaments} = await supabaseClient.from('pp_tournaments').select('*');
+  const {data: tournaments, error} = await supabaseClient.from('pp_tournaments').select('*');
+  if(error){ console.error('Ошибка загрузки турниров', error); return; }
+
   const days = calendarDiv.querySelectorAll('.day');
   days.forEach(day=>day.classList.remove('tournament'));
 
