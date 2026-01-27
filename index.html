@@ -125,6 +125,29 @@ button:hover { transform: scale(1.05); }
   height: 16px;
   border-radius: 4px;
 }
+
+.join-tournament-btn {
+  background: #22c55e;
+  color: black;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-left: 10px;
+  cursor: pointer;
+  border: none;
+}
+.join-tournament-btn:hover {
+  background: #16a34a;
+  transform: scale(1.05);
+}
+
+.tournament-action {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 8px;
+  border: 1px solid #22c55e;
+}
 </style>
 </head>
 <body>
@@ -132,18 +155,18 @@ button:hover { transform: scale(1.05); }
 <!-- Обновленная шапка с описанием -->
 <section class="welcome-section">
   <div class="welcome-title">
-    <span></span>
-    <span></span>
+    <span>🏓</span>
+    <span>Система организации турниров по настольному теннису</span>
   </div>
   
   <div class="welcome-text">
-    <p> <strong></p>
+    <p><strong>Добро пожаловать!</strong> Эта платформа помогает организовать турниры по настольному теннису среди коллег и друзей. Выбирайте даты, присоединяйтесь к турнирам и играйте!</p>
   </div>
   
   <div class="how-it-works">
     <div class="step">
       <div class="step-number">1</div>
-      <div class="step-text">📅 <strong>Выбирайте свободные даты</strong>, когда вы готовы играть. Просто кликните на дни в календаре ниже, чтобы отметить те дни в которые вы готовы играть.</div>
+      <div class="step-text">📅 <strong>Выбирайте свободные даты</strong>, когда вы готовы играть. Просто кликните на дни в календаре ниже, чтобы отметить те дни, в которые вы готовы играть.</div>
     </div>
     
     <div class="step">
@@ -153,7 +176,7 @@ button:hover { transform: scale(1.05); }
     
     <div class="step">
       <div class="step-number">3</div>
-      <div class="step-text">🏆 <strong>Участвуйте и побеждайте:</strong> Следите за активными турнирами, узнавайте своих соперников и готовьтесь к игре!</div>
+      <div class="step-text">🏆 <strong>Присоединяйтесь к турнирам:</strong> Вы можете выбрать дату с уже созданным турниром и присоединиться к нему! Все турниры отображаются в календаре.</div>
     </div>
   </div>
   
@@ -162,12 +185,13 @@ button:hover { transform: scale(1.05); }
     <div class="tip-text">• 🗓️ <strong>Выбирайте сразу несколько дней</strong> на неделе — это значительно увеличит шансы на создание турнира!</div>
     <div class="tip-text">• 👤 <strong>Используйте фамилию на латинице</strong> в качестве логина (например: Ivanov, PetrovS). Так в турнирной таблице сразу будет понятно, кто ваш соперник!</div>
     <div class="tip-text">• 🤝 <strong>Приглашайте коллег и друзей</strong> — чем больше участников, тем больше турниров!</div>
+    <div class="tip-text">• 🎯 <strong>Присоединяйтесь к существующим турнирам</strong> — выбирайте даты с уже созданными турнирами!</div>
   </div>
   
   <div style="margin-top: 20px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-radius: 8px;">
     <div style="color: #facc15; font-weight: bold; display: flex; align-items: center; gap: 8px; justify-content: center;">
-      <span></span>
-      <span></span>
+      <span>🚀</span>
+      <span>Готовы начать? Зарегистрируйтесь или войдите ниже!</span>
     </div>
   </div>
 </section>
@@ -358,12 +382,27 @@ function buildCalendar(){
     }
     
     day.onclick = () => {
-      if(selectedDates.includes(dateStr)){
+      // Проверяем, есть ли уже турнир на эту дату
+      const isTournamentDay = day.classList.contains('tournament');
+      const isSelected = selectedDates.includes(dateStr);
+      
+      if(isSelected){
+        // Убираем выбор
         selectedDates = selectedDates.filter(x => x !== dateStr);
         day.classList.remove('selected');
       } else {
+        // Добавляем выбор
         selectedDates.push(dateStr);
         day.classList.add('selected');
+        
+        // Если это день с турниром, показываем сообщение
+        if(isTournamentDay) {
+          const tournament = allTournaments.find(t => t.play_date === dateStr);
+          if(tournament) {
+            messageDiv.innerText = `🎯 Вы выбрали дату с турниром: "${tournament.name}"`;
+            messageDiv.className = 'success';
+          }
+        }
       }
     }
     calendarDiv.appendChild(day);
@@ -573,6 +612,9 @@ async function displayActiveTournaments(){
     
     const participants = participantsData || [];
     
+    // Проверяем, участвует ли текущий пользователь в этом турнире
+    const userParticipates = user && participants.some(p => p.user_id === user.id);
+    
     tournamentDiv.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -602,9 +644,112 @@ async function displayActiveTournaments(){
              ✅ <span>Турнир подтвержден!</span>
            </div>`
       }
+      ${user && !userParticipates ? `
+        <div class="tournament-action">
+          <button class="join-tournament-btn" onclick="joinTournament('${tournament.play_date}')">
+            🎯 Присоединиться к турниру
+          </button>
+        </div>
+      ` : ''}
+      ${userParticipates ? `
+        <div class="tournament-action" style="background: rgba(34, 197, 94, 0.1);">
+          <div style="color:#22c55e; font-weight:bold;">
+            ✅ Вы участвуете в этом турнире!
+          </div>
+        </div>
+      ` : ''}
     `;
     
     tournamentsListDiv.appendChild(tournamentDiv);
+  }
+}
+
+// --- Функция присоединения к турниру ---
+async function joinTournament(tournamentDate) {
+  if(!user) {
+    alert('⚠️ Сначала войдите в систему!');
+    return;
+  }
+
+  try {
+    // Проверяем, не выбрал ли уже пользователь эту дату
+    const {data: existingSelection} = await supabaseClient
+      .from('pp_user_dates')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('selected_date', tournamentDate);
+
+    if(existingSelection && existingSelection.length > 0) {
+      alert('✅ Вы уже участвуете в этом турнире!');
+      return;
+    }
+
+    // Добавляем пользователя к турниру
+    const {error} = await supabaseClient
+      .from('pp_user_dates')
+      .insert([{
+        user_id: user.id,
+        selected_date: tournamentDate
+      }]);
+
+    if(error) throw error;
+
+    // Обновляем выбранные даты пользователя
+    selectedDates.push(tournamentDate);
+    
+    // Обновляем календарь
+    const dayDiv = calendarDiv.querySelector(`[data-date="${tournamentDate}"]`);
+    if(dayDiv) {
+      dayDiv.classList.add('selected');
+    }
+
+    // Показываем сообщение об успехе
+    const tournament = allTournaments.find(t => t.play_date === tournamentDate);
+    if(tournament) {
+      messageDiv.innerText = `🎯 Вы успешно присоединились к турниру: "${tournament.name}"!`;
+      messageDiv.className = 'success';
+    } else {
+      messageDiv.innerText = '✅ Вы успешно присоединились к турниру!';
+      messageDiv.className = 'success';
+    }
+
+    // Обновляем список турниров
+    await loadTournaments();
+
+    // Проверяем, нужно ли обновить название турнира
+    await updateTournamentName(tournamentDate);
+
+  } catch(e) {
+    console.error('Join tournament error:', e);
+    alert('❌ Ошибка присоединения к турниру: ' + (e.message || 'Неизвестная ошибка'));
+  }
+}
+
+// --- Обновление названия турнира при добавлении участников ---
+async function updateTournamentName(tournamentDate) {
+  try {
+    // Получаем участников турнира
+    const {data: participants} = await supabaseClient
+      .from('pp_user_dates')
+      .select(`
+        user_id,
+        pp_users!inner(login)
+      `)
+      .eq('selected_date', tournamentDate)
+      .limit(5); // Ограничиваем количество имен в названии
+
+    if(participants && participants.length > 0) {
+      const userNames = participants.map(p => p.pp_users?.login).join(', ');
+      const tournamentName = `🏓 Турнир ${tournamentDate} (${userNames}${participants.length > 5 ? '...' : ''})`;
+      
+      // Обновляем название турнира
+      await supabaseClient
+        .from('pp_tournaments')
+        .update({name: tournamentName})
+        .eq('play_date', tournamentDate);
+    }
+  } catch(e) {
+    console.error('Update tournament name error:', e);
   }
 }
 
