@@ -42,7 +42,7 @@ button:hover { transform: scale(1.05); }
 </div>
 
 <script>
-// ⚡ ВАЖНО: вставь сюда свой рабочий anon public key
+// ⚡ Вставь сюда свой рабочий anon public key из Supabase
 const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'
 const SUPABASE_ANON_KEY = 'ВАШ_АНОН_КЛЮЧ_СЮДА'
 
@@ -68,19 +68,16 @@ async function auth(){
   }
 
   try {
-    // Проверяем, есть ли пользователь
+    // Получаем всех пользователей, фильтр будет на клиенте
     const {data, error} = await supabaseClient
       .from('pp_users')
       .select('*')
-      .ilike('login', loginVal) // безопасно для кириллицы
-      .eq('password', passVal)
-      .single()
 
-    if(error && error.code !== 'PGRST116'){ 
-      throw error
-    }
+    if(error) throw error
 
-    if(!data){
+    const foundUser = data.find(u => u.login === loginVal && u.password === passVal)
+
+    if(!foundUser){
       // создаем нового пользователя
       const {data: newUser, error: insertError} = await supabaseClient
         .from('pp_users')
@@ -92,7 +89,7 @@ async function auth(){
       messageDiv.innerText = 'Регистрация выполнена!'
       messageDiv.className = 'success'
     } else {
-      user = data
+      user = foundUser
       messageDiv.innerText = 'Вход выполнен!'
       messageDiv.className = 'success'
     }
