@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🏓 Турниры</title>
+<title>🏓 Турниры по настольному теннису</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 body { margin:0; font-family:system-ui; background:#0f172a; color:white; }
@@ -27,7 +27,7 @@ button:hover { transform: scale(1.05); }
 <h1>🏓 Турниры по настольному теннису</h1>
 
 <div>
-<input id="login" placeholder="Логин">
+<input id="login" placeholder="Логин (латиница/цифры)">
 <input id="password" type="password" placeholder="Пароль">
 <button onclick="auth()">Войти / Регистрация</button>
 <div id="message"></div>
@@ -36,9 +36,6 @@ button:hover { transform: scale(1.05); }
 <h2>Выберите даты</h2>
 <div id="calendar" class="calendar"></div>
 <button onclick="submitDates()">Подтвердить даты</button>
-
-<h2>Сформированные турниры</h2>
-<div id="tournamentList" class="calendar"></div>
 </div>
 
 <script>
@@ -69,10 +66,13 @@ async function auth(){
   }
 
   try {
-    const {data, error} = await supabaseClient.from('pp_users').select('*');
+    // Используем безопасный фильтр через encodeURIComponent
+    const {data, error} = await supabaseClient.from('pp_users')
+      .select('*')
+      .eq('login', encodeURIComponent(loginVal));
     if(error) throw error;
 
-    let foundUser = data.find(u => u.login === loginVal && u.password === passVal);
+    let foundUser = data.find(u => u.password === passVal);
     if(!foundUser){
       const {data: newUser, error: insertError} = await supabaseClient
         .from('pp_users').insert({login: loginVal,password: passVal}).select().single();
