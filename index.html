@@ -40,7 +40,7 @@ button:hover { transform: scale(1.05); }
 
 <script>
 const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
-const SUPABASE_ANON_KEY = 'ВАШ_АНОН_КЛЮЧ_СЮДА';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -65,15 +65,23 @@ async function auth(){
     return;
   }
 
+  // Проверяем, что логин/пароль только ASCII
+  if(!/^[\x20-\x7E]+$/.test(loginVal) || !/^[\x20-\x7E]+$/.test(passVal)){
+    messageDiv.innerText = 'Логин и пароль должны быть только латиница/цифры';
+    messageDiv.className = 'error';
+    return;
+  }
+
   try {
-    // Используем безопасный фильтр через encodeURIComponent
+    // Поиск пользователя
     const {data, error} = await supabaseClient.from('pp_users')
       .select('*')
-      .eq('login', encodeURIComponent(loginVal));
+      .eq('login', loginVal);
     if(error) throw error;
 
     let foundUser = data.find(u => u.password === passVal);
     if(!foundUser){
+      // Регистрация
       const {data: newUser, error: insertError} = await supabaseClient
         .from('pp_users').insert({login: loginVal,password: passVal}).select().single();
       if(insertError) throw insertError;
