@@ -3,86 +3,145 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🏓 Турниры - Регистрация</title>
+<title>🏓 Турниры</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 body { margin:0; font-family:system-ui; background:#0f172a; color:white; }
-.container { max-width:500px; margin:auto; padding:10px; text-align:center; }
+.container { max-width:500px; margin:auto; padding:15px; text-align:center; }
 h1 { margin-bottom:10px; }
 input,button { width:100%; padding:10px; border-radius:8px; border:none; margin-top:8px; font-size:16px; }
 button { background:#38bdf8; font-weight:bold; cursor:pointer; transition: transform 0.2s; }
 button:hover { transform: scale(1.05); }
+
 .tournament-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:20px; }
 .tournament-card { background:#22d3ee; color:black; padding:10px; border-radius:10px; position:relative; animation:fadeIn 0.5s ease forwards; cursor:pointer; transition: transform 0.2s; }
 .tournament-card:hover { transform: scale(1.05); }
 @keyframes fadeIn { from {opacity:0; transform:translateY(-10px);} to {opacity:1; transform:translateY(0);} }
+
 .tooltip { position:absolute; top:-40px; left:50%; transform:translateX(-50%); background:#1e293b; padding:4px 6px; font-size:12px; border-radius:4px; display:none; white-space:nowrap; z-index:10; }
 .tournament-card:hover .tooltip { display:block; }
+
+.success { color:#22c55e; font-weight:bold; margin-top:10px; }
+.error { color:#f87171; font-weight:bold; margin-top:10px; }
+
 </style>
 </head>
 <body>
 <div class="container">
 <h1>🏓 Турниры</h1>
-<p>Выберите логин и пароль, чтобы зарегистрироваться или войти</p>
+<p>Введите логин и пароль для регистрации или входа</p>
 
 <input id="login" placeholder="Логин">
 <input id="password" type="password" placeholder="Пароль">
 <button onclick="auth()">Войти / Регистрация</button>
 
+<div id="message"></div>
+
 <h2 style="margin-top:30px;">Будущие турниры</h2>
 <div class="tournament-list" id="tournamentList"></div>
-
 </div>
 
 <script>
-const db = supabase.createClient(
-  'https://bqycjfcjtdawyrysgrbw.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6ImJxeWNqZmNqdGRyd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
-)
+const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWNqZmNqdGRhd3lyeXNncmJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDE5NzAsImV4cCI6MjA4MjE3Nzk3MH0.LEOUMFAd1cz_1e4uawJcaZLPCMqAQHEWM52Oy7fDjsE'
 
-const loginInput=document.getElementById('login')
-const passwordInput=document.getElementById('password')
-const tournamentList=document.getElementById('tournamentList')
-let user=null
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+const loginInput = document.getElementById('login')
+const passwordInput = document.getElementById('password')
+const tournamentList = document.getElementById('tournamentList')
+const messageDiv = document.getElementById('message')
+
+let user = null
 
 async function auth(){
-  const loginVal=loginInput.value
-  const passVal=passwordInput.value
+  const loginVal = loginInput.value.trim()
+  const passVal = passwordInput.value.trim()
+  messageDiv.innerText = ''
+  messageDiv.className = ''
 
-  if(!loginVal||!passVal){alert('Введите логин и пароль'); return;}
-
-  let {data} = await db.from('pp_users').select('*')
-    .eq('login',loginVal).eq('password',passVal).single()
-
-  if(!data){
-    await db.from('pp_users').insert({login:loginVal,password:passVal})
-    return auth()
+  if(!loginVal || !passVal){ 
+    messageDiv.innerText = 'Введите логин и пароль'
+    messageDiv.className = 'error'
+    return
   }
 
-  user=data
-  alert('Вход выполнен!'); 
-  location.reload() // или редирект на основной календарь
+  // проверяем есть ли пользователь
+  const {data, error} = await supabase
+    .from('pp_users')
+    .select('*')
+    .eq('login', loginVal)
+    .eq('password', passVal)
+    .single()
+
+  if(error && error.code !== 'PGRST116'){ // PGRST116 = no rows
+    messageDiv.innerText = 'Ошибка при авторизации: '+error.message
+    messageDiv.className = 'error'
+    return
+  }
+
+  if(!data){
+    // создаем нового пользователя
+    const {data: newUser, error: insertError} = await supabase
+      .from('pp_users')
+      .insert({login: loginVal, password: passVal})
+      .select()
+      .single()
+    if(insertError){
+      messageDiv.innerText = 'Ошибка при регистрации: '+insertError.message
+      messageDiv.className = 'error'
+      return
+    }
+    user = newUser
+    messageDiv.innerText = 'Регистрация выполнена!'
+    messageDiv.className = 'success'
+  } else {
+    user = data
+    messageDiv.innerText = 'Вход выполнен!'
+    messageDiv.className = 'success'
+  }
+
+  // загружаем турниры после входа
+  loadTournaments()
 }
 
 async function loadTournaments(){
-  const {data: tournaments} = await db.from('pp_tournaments').select('*').order('play_date', {ascending:true})
-  tournamentList.innerHTML=''
+  const {data: tournaments, error} = await supabase
+    .from('pp_tournaments')
+    .select('*')
+    .order('play_date', {ascending:true})
+
+  if(error){
+    console.error('Ошибка загрузки турниров:', error)
+    messageDiv.innerText = 'Ошибка загрузки турниров: '+error.message
+    messageDiv.className = 'error'
+    return
+  }
+
+  tournamentList.innerHTML = ''
   for(const t of tournaments){
-    const card=document.createElement('div')
-    card.className='tournament-card'
-    card.innerText=t.play_date+' 🏆'
+    const card = document.createElement('div')
+    card.className = 'tournament-card'
+    card.innerText = `${t.play_date} 🏆`
 
     // Tooltip с участниками
-    const tt=document.createElement('div')
-    tt.className='tooltip'
-    const res=await db.from('pp_tournament_players').select('user_id').eq('tournament_id',t.id)
-    if(res.data.length>0){
-      const names=[]
-      for(const p of res.data){
-        const u=await db.from('pp_users').select('login').eq('id',p.user_id).single()
-        names.push(u.data.login)
+    const tt = document.createElement('div')
+    tt.className = 'tooltip'
+    const {data: participants} = await supabase
+      .from('pp_tournament_players')
+      .select('user_id')
+      .eq('tournament_id', t.id)
+    if(participants && participants.length > 0){
+      const names = []
+      for(const p of participants){
+        const {data: u} = await supabase
+          .from('pp_users')
+          .select('login')
+          .eq('id', p.user_id)
+          .single()
+        if(u) names.push(u.login)
       }
-      tt.innerText='Участники: '+names.join(', ')
+      tt.innerText = 'Участники: '+names.join(', ')
       card.appendChild(tt)
     }
 
@@ -90,6 +149,7 @@ async function loadTournaments(){
   }
 }
 
+// Загружаем турниры сразу при открытии страницы (даже без логина)
 loadTournaments()
 </script>
 </body>
