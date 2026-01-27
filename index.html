@@ -7,150 +7,171 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 body { margin:0; font-family:system-ui; background:#0f172a; color:white; }
-.container { max-width:500px; margin:auto; padding:15px; text-align:center; }
-h1 { margin-bottom:10px; }
+.container { max-width:700px; margin:auto; padding:15px; text-align:center; }
+h1,h2 { margin-bottom:10px; }
 input,button { width:100%; padding:10px; border-radius:8px; border:none; margin-top:8px; font-size:16px; }
 button { background:#38bdf8; font-weight:bold; cursor:pointer; transition: transform 0.2s; }
 button:hover { transform: scale(1.05); }
 
-.tournament-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:20px; }
-.tournament-card { background:#22d3ee; color:black; padding:10px; border-radius:10px; position:relative; animation:fadeIn 0.5s ease forwards; cursor:pointer; transition: transform 0.2s; }
-.tournament-card:hover { transform: scale(1.05); }
-@keyframes fadeIn { from {opacity:0; transform:translateY(-10px);} to {opacity:1; transform:translateY(0);} }
-
-.tooltip { position:absolute; top:-40px; left:50%; transform:translateX(-50%); background:#1e293b; padding:4px 6px; font-size:12px; border-radius:4px; display:none; white-space:nowrap; z-index:10; }
-.tournament-card:hover .tooltip { display:block; }
+.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:20px; }
+.day { padding:10px; border-radius:8px; cursor:pointer; transition:0.2s; position:relative; }
+.day.selected { background:#22c55e; color:black; }
+.day.tournament { background:#facc15; color:black; }
 
 .success { color:#22c55e; font-weight:bold; margin-top:10px; }
 .error { color:#f87171; font-weight:bold; margin-top:10px; }
-
 </style>
 </head>
 <body>
 <div class="container">
-<h1>🏓 Турниры</h1>
-<p>Введите логин и пароль для регистрации или входа</p>
+<h1>🏓 Турниры по настольному теннису</h1>
 
+<div>
 <input id="login" placeholder="Логин">
 <input id="password" type="password" placeholder="Пароль">
 <button onclick="auth()">Войти / Регистрация</button>
-
 <div id="message"></div>
+</div>
 
-<h2 style="margin-top:30px;">Будущие турниры</h2>
-<div class="tournament-list" id="tournamentList"></div>
+<h2>Выберите даты</h2>
+<div id="calendar" class="calendar"></div>
+<button onclick="submitDates()">Подтвердить даты</button>
+
+<h2>Сформированные турниры</h2>
+<div id="tournamentList" class="calendar"></div>
 </div>
 
 <script>
-// ⚡ Вставь сюда свой рабочий anon public key из Supabase
-const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co'
-const SUPABASE_ANON_KEY = 'ВАШ_АНОН_КЛЮЧ_СЮДА'
+const SUPABASE_URL = 'https://bqycjfcjtdawyrysgrbw.supabase.co';
+const SUPABASE_ANON_KEY = 'ВАШ_АНОН_КЛЮЧ_СЮДА';
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const loginInput = document.getElementById('login')
-const passwordInput = document.getElementById('password')
-const tournamentList = document.getElementById('tournamentList')
-const messageDiv = document.getElementById('message')
+const loginInput = document.getElementById('login');
+const passwordInput = document.getElementById('password');
+const messageDiv = document.getElementById('message');
+const calendarDiv = document.getElementById('calendar');
 
-let user = null
+let user = null;
+let selectedDates = [];
 
+// --- Авторизация / регистрация ---
 async function auth(){
-  const loginVal = loginInput.value.trim()
-  const passVal = passwordInput.value.trim()
-  messageDiv.innerText = ''
-  messageDiv.className = ''
+  const loginVal = loginInput.value.trim();
+  const passVal = passwordInput.value.trim();
+  messageDiv.innerText = '';
+  messageDiv.className = '';
 
   if(!loginVal || !passVal){ 
-    messageDiv.innerText = 'Введите логин и пароль'
-    messageDiv.className = 'error'
-    return
+    messageDiv.innerText = 'Введите логин и пароль';
+    messageDiv.className = 'error';
+    return;
   }
 
   try {
-    // Получаем всех пользователей, фильтр будет на клиенте
-    const {data, error} = await supabaseClient
-      .from('pp_users')
-      .select('*')
+    const {data, error} = await supabaseClient.from('pp_users').select('*');
+    if(error) throw error;
 
-    if(error) throw error
-
-    const foundUser = data.find(u => u.login === loginVal && u.password === passVal)
-
+    let foundUser = data.find(u => u.login === loginVal && u.password === passVal);
     if(!foundUser){
-      // создаем нового пользователя
       const {data: newUser, error: insertError} = await supabaseClient
-        .from('pp_users')
-        .insert({login: loginVal, password: passVal})
-        .select()
-        .single()
-      if(insertError) throw insertError
-      user = newUser
-      messageDiv.innerText = 'Регистрация выполнена!'
-      messageDiv.className = 'success'
+        .from('pp_users').insert({login: loginVal,password: passVal}).select().single();
+      if(insertError) throw insertError;
+      foundUser = newUser;
+      messageDiv.innerText = 'Регистрация выполнена!';
+      messageDiv.className = 'success';
     } else {
-      user = foundUser
-      messageDiv.innerText = 'Вход выполнен!'
-      messageDiv.className = 'success'
+      messageDiv.innerText = 'Вход выполнен!';
+      messageDiv.className = 'success';
     }
 
-    loadTournaments()
+    user = foundUser;
+    buildCalendar();
+    loadTournaments();
+
   } catch(e){
-    console.error('Ошибка авторизации:', e)
-    messageDiv.innerText = 'Ошибка авторизации: '+e.message
-    messageDiv.className = 'error'
+    console.error(e);
+    messageDiv.innerText = 'Ошибка: '+e.message;
+    messageDiv.className = 'error';
   }
 }
 
-async function loadTournaments(){
-  try {
-    const {data: tournaments, error} = await supabaseClient
-      .from('pp_tournaments')
-      .select('*')
-      .order('play_date', {ascending:true})
+// --- Календарь ---
+function buildCalendar(){
+  calendarDiv.innerHTML = '';
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
 
-    if(error) throw error
+  for(let i=0;i<firstDay;i++){ calendarDiv.appendChild(document.createElement('div')); }
 
-    tournamentList.innerHTML = ''
-    for(const t of tournaments){
-      const card = document.createElement('div')
-      card.className = 'tournament-card'
-      card.innerText = `${t.play_date} 🏆`
-
-      // Tooltip с участниками
-      const tt = document.createElement('div')
-      tt.className = 'tooltip'
-      const {data: participants} = await supabaseClient
-        .from('pp_tournament_players')
-        .select('user_id')
-        .eq('tournament_id', t.id)
-
-      if(participants && participants.length > 0){
-        const names = []
-        for(const p of participants){
-          const {data: u} = await supabaseClient
-            .from('pp_users')
-            .select('login')
-            .eq('id', p.user_id)
-            .single()
-          if(u) names.push(u.login)
-        }
-        tt.innerText = 'Участники: '+names.join(', ')
-        card.appendChild(tt)
+  for(let d=1; d<=daysInMonth; d++){
+    const day = document.createElement('div');
+    day.className = 'day';
+    day.innerText = d;
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    day.dataset.date = dateStr;
+    day.onclick = ()=>{
+      if(selectedDates.includes(dateStr)){
+        selectedDates = selectedDates.filter(x=>x!==dateStr);
+        day.classList.remove('selected');
+      } else {
+        selectedDates.push(dateStr);
+        day.classList.add('selected');
       }
-
-      tournamentList.appendChild(card)
     }
-
-  } catch(e){
-    console.error('Ошибка загрузки турниров:', e)
-    messageDiv.innerText = 'Ошибка загрузки турниров: '+e.message
-    messageDiv.className = 'error'
+    calendarDiv.appendChild(day);
   }
 }
 
-// Загружаем турниры сразу при открытии страницы
-loadTournaments()
+// --- Подтверждение выбранных дат ---
+async function submitDates(){
+  if(!user) return alert('Сначала войдите!');
+
+  try{
+    for(const date of selectedDates){
+      await supabaseClient.from('pp_user_dates').insert({user_id:user.id,selected_date:date});
+    }
+    messageDiv.innerText = 'Даты отправлены!';
+    messageDiv.className = 'success';
+    await checkTournaments();
+    loadTournaments();
+  } catch(e){
+    console.error(e);
+    messageDiv.innerText = 'Ошибка отправки дат';
+    messageDiv.className = 'error';
+  }
+}
+
+// --- Авто-турниры ---
+async function checkTournaments(){
+  const {data: allDates} = await supabaseClient.from('pp_user_dates').select('*');
+  const dateCount = {};
+  allDates.forEach(d=>{ dateCount[d.selected_date] = (dateCount[d.selected_date]||0)+1; });
+  for(const [date, count] of Object.entries(dateCount)){
+    if(count>=3){
+      const {data: existing} = await supabaseClient.from('pp_tournaments')
+        .select('*').eq('play_date', date);
+      if(existing.length===0){
+        await supabaseClient.from('pp_tournaments').insert({play_date:date,name:`Турнир ${date}`});
+      }
+    }
+  }
+}
+
+// --- Загрузка турниров ---
+async function loadTournaments(){
+  const {data: tournaments} = await supabaseClient.from('pp_tournaments').select('*');
+  const days = calendarDiv.querySelectorAll('.day');
+  days.forEach(day=>day.classList.remove('tournament'));
+
+  tournaments.forEach(t=>{
+    const dayDiv = calendarDiv.querySelector(`[data-date="${t.play_date}"]`);
+    if(dayDiv) dayDiv.classList.add('tournament');
+  });
+}
 </script>
 </body>
 </html>
