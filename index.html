@@ -120,63 +120,6 @@ button:hover { transform: scale(1.05); }
   color: #94a3b8;
 }
 
-.user-profile {
-  background: rgba(56, 189, 248, 0.1);
-  padding: 15px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 2px solid #facc15;
-  display: none;
-}
-.profile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-.profile-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.profile-avatar {
-  width: 40px;
-  height: 40px;
-  background: #38bdf8;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 18px;
-}
-.selected-dates-list {
-  background: rgba(30, 41, 59, 0.8);
-  border-radius: 8px;
-  padding: 10px;
-  margin-top: 10px;
-}
-.selected-date-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px;
-  background: #334155;
-  border-radius: 6px;
-  margin-bottom: 5px;
-}
-.selected-date-item:last-child {
-  margin-bottom: 0;
-}
-.date-badge {
-  background: #22c55e;
-  color: black;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-}
-
 .calendar-controls {
   display: flex;
   justify-content: space-between;
@@ -285,172 +228,19 @@ button:hover { transform: scale(1.05); }
   border-radius: 8px;
   border: 1px solid #22c55e;
 }
-
-/* Стили для админских таблиц */
-.admin-section {
-  background: rgba(30, 41, 59, 0.8);
-  border-radius: 10px;
-  padding: 15px;
-  margin: 15px 0;
-  border: 1px solid #38bdf8;
-}
-.admin-section h4 {
-  color: #facc15;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.user-dates-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-  font-size: 14px;
-}
-.user-dates-table th {
-  background: rgba(56, 189, 248, 0.2);
-  padding: 8px;
-  text-align: left;
-  border-bottom: 2px solid #38bdf8;
-  color: #cbd5e1;
-}
-.user-dates-table td {
-  padding: 8px;
-  border-bottom: 1px solid #334155;
-}
-.user-dates-table tr:hover {
-  background: rgba(56, 189, 248, 0.1);
-}
-.empty-row {
-  text-align: center;
-  color: #94a3b8;
-  padding: 20px;
-}
-
-/* Стили для модального окна редактирования участников */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 20px;
-}
-.modal-content {
-  background: #1e293b;
-  border-radius: 12px;
-  padding: 20px;
-  max-width: 500px;
-  width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  border: 2px solid #38bdf8;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 10px;
-}
-.modal-header h3 {
-  color: #facc15;
-  margin: 0;
-}
-.modal-close {
-  background: #f87171;
-  color: black;
-  border: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 16px;
-}
-.modal-close:hover {
-  background: #ef4444;
-}
-.participant-manage-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  background: #334155;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-.participant-manage-item button {
-  padding: 5px 10px;
-  font-size: 12px;
-  margin: 0;
-}
-.add-participant-form {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-.add-participant-form select {
-  flex: 1;
-  background: #334155;
-  color: white;
-  border: 1px solid #475569;
-}
-.logout-btn {
-  background: #f87171;
-  color: black;
-  padding: 5px 15px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  border: none;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
-.logout-btn:hover {
-  background: #ef4444;
-  transform: scale(1.05);
-}
 </style>
 </head>
 <body>
 <div class="container">
-<!-- Личный кабинет пользователя -->
-<section class="user-profile" id="userProfile">
-  <div class="profile-header">
-    <div class="profile-info">
-      <div class="profile-avatar" id="userAvatar"></div>
-      <div>
-        <h3 style="margin:0; color:#facc15;" id="userName"></h3>
-        <div style="color:#94a3b8; font-size:14px;" id="userStats"></div>
-      </div>
-    </div>
-    <button class="logout-btn" onclick="logout()">🚪 Выйти</button>
-  </div>
-  
-  <div>
-    <h4 style="color:#38bdf8; margin-bottom:10px;">📅 Мои выбранные даты</h4>
-    <div class="selected-dates-list" id="selectedDatesList">
-      <p style="color:#94a3b8; text-align:center;">😔 Вы еще не выбрали даты</p>
-    </div>
-  </div>
-</section>
-
 <!-- Обновленная шапка с описанием -->
-<section class="welcome-section" id="welcomeSection">
+<section class="welcome-section">
   <div class="welcome-title">
-    <span>🏓 Турниры по настольному теннису</span>
+    <span></span>
+    <span></span>
   </div>
   
   <div class="welcome-text">
-    <p><strong>Добро пожаловать в систему организации турниров по настольному теннису!</strong></p>
+    <p><strong></strong></p>
   </div>
   
   <div class="how-it-works">
@@ -474,7 +264,8 @@ button:hover { transform: scale(1.05); }
     <div class="tip-header">💡 Советы для максимальной эффективности:</div>
     <div class="tip-text">• 🗓️ <strong>Выбирайте сразу несколько дней</strong> на неделе — это значительно увеличит шансы на создание турнира!</div>
     <div class="tip-text">• 👤 <strong>Используйте фамилию на латинице</strong> в качестве логина (например: Ivanov, PetrovS). Так в турнирной таблице сразу будет понятно, кто ваш соперник!</div>
-    <div class="tip-text">• 🎯 <strong>Следите за активными турнирами</strong> — вы всегда можете присоединиться к уже созданному турниру!</div>
+    <div class="tip-text"> <strong>П</strong></div>
+    <div class="tip-text"><strong></strong></div>
   </div>
   
   <div style="margin-top: 20px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-radius: 8px;">
@@ -486,7 +277,7 @@ button:hover { transform: scale(1.05); }
 </section>
 
 <!-- Обновленная форма входа -->
-<section class="login-form" id="loginForm">
+<section class="login-form">
   <h2>🔐 Вход / Регистрация</h2>
   <div class="input-group">
     <input id="login" placeholder="👤 Логин (например: Ivanov)">
@@ -544,25 +335,12 @@ button:hover { transform: scale(1.05); }
 
 <div class="admin-panel" id="adminPanel" style="display:none;">
 <h3>⚙️ Административная панель</h3>
-  
-<!-- Секция создания турнира -->
 <div>
 <input id="adminTournamentName" placeholder="🎯 Название турнира">
 <input id="adminTournamentDate" type="date">
 <button onclick="createTournament()">✨ Создать турнир</button>
 </div>
-
-<!-- Секция выбранных пользователями дат -->
-<div class="admin-section" id="userDatesSection" style="display:none;">
-<h4>📅 Даты, выбранные пользователями</h4>
-<div id="userDatesTableContainer"></div>
-</div>
-
-<!-- Секция управления турнирами -->
-<div class="admin-section">
-<h4>🏆 Управление турнирами</h4>
 <div id="tournamentAdminList"></div>
-</div>
 </div>
 </div>
 
@@ -576,183 +354,16 @@ const passwordInput = document.getElementById('password');
 const messageDiv = document.getElementById('message');
 const calendarDiv = document.getElementById('calendar');
 const adminPanelDiv = document.getElementById('adminPanel');
-const userDatesSection = document.getElementById('userDatesSection');
-const userDatesTableContainer = document.getElementById('userDatesTableContainer');
 const tournamentAdminListDiv = document.getElementById('tournamentAdminList');
 const activeTournamentsDiv = document.getElementById('activeTournaments');
 const tournamentsListDiv = document.getElementById('tournamentsList');
 const monthSelect = document.getElementById('monthSelect');
 const yearSelect = document.getElementById('yearSelect');
-const userProfileDiv = document.getElementById('userProfile');
-const loginFormDiv = document.getElementById('loginForm');
-const welcomeSectionDiv = document.getElementById('welcomeSection');
-const userNameSpan = document.getElementById('userName');
-const userAvatarDiv = document.getElementById('userAvatar');
-const userStatsDiv = document.getElementById('userStats');
-const selectedDatesListDiv = document.getElementById('selectedDatesList');
 
 let user = null;
 let selectedDates = [];
 let allTournaments = [];
-let allUsers = [];
-let allUserDates = [];
 let currentDate = new Date();
-
-// --- Проверка сохраненной сессии ---
-function checkSession() {
-  const savedUser = localStorage.getItem('pingpong_user');
-  if (savedUser) {
-    try {
-      const userData = JSON.parse(savedUser);
-      // Проверяем, не истекла ли сессия (24 часа)
-      const sessionTime = localStorage.getItem('pingpong_session_time');
-      const now = new Date().getTime();
-      
-      if (sessionTime && (now - parseInt(sessionTime)) < 24 * 60 * 60 * 1000) {
-        // Сессия активна
-        user = userData;
-        showUserProfile();
-        buildCalendar();
-        loadAllUsers();
-        loadAllUserDates();
-        loadTournaments();
-        loadUserSelectedDates();
-        
-        if(user.login.toLowerCase() === 'admin') {
-          adminPanelDiv.style.display='block';
-          userDatesSection.style.display='block';
-          renderUserDatesTable();
-        }
-        
-        return true;
-      } else {
-        // Сессия истекла
-        localStorage.removeItem('pingpong_user');
-        localStorage.removeItem('pingpong_session_time');
-      }
-    } catch(e) {
-      console.error('Ошибка восстановления сессии:', e);
-    }
-  }
-  return false;
-}
-
-// --- Сохранение сессии ---
-function saveSession() {
-  if (user) {
-    localStorage.setItem('pingpong_user', JSON.stringify(user));
-    localStorage.setItem('pingpong_session_time', new Date().getTime().toString());
-  }
-}
-
-// --- Выход из системы ---
-function logout() {
-  user = null;
-  selectedDates = [];
-  localStorage.removeItem('pingpong_user');
-  localStorage.removeItem('pingpong_session_time');
-  
-  // Показываем форму входа
-  loginFormDiv.style.display = 'block';
-  welcomeSectionDiv.style.display = 'block';
-  userProfileDiv.style.display = 'none';
-  adminPanelDiv.style.display = 'none';
-  
-  // Сбрасываем форму
-  loginInput.value = '';
-  passwordInput.value = '';
-  
-  messageDiv.innerText = '👋 Вы вышли из системы';
-  messageDiv.className = 'success';
-  
-  // Обновляем календарь
-  buildCalendar();
-}
-
-// --- Показать профиль пользователя ---
-function showUserProfile() {
-  if (!user) return;
-  
-  loginFormDiv.style.display = 'none';
-  welcomeSectionDiv.style.display = 'none';
-  userProfileDiv.style.display = 'block';
-  
-  // Устанавливаем имя пользователя
-  userNameSpan.textContent = user.login;
-  
-  // Устанавливаем аватар (первая буква логина)
-  userAvatarDiv.textContent = user.login.charAt(0).toUpperCase();
-  
-  // Загружаем выбранные даты пользователя для отображения в профиле
-  loadUserSelectedDatesForProfile();
-}
-
-// --- Загрузка выбранных дат для профиля ---
-async function loadUserSelectedDatesForProfile() {
-  if (!user) return;
-  
-  try {
-    const {data: userDates, error} = await supabaseClient
-      .from('pp_user_dates')
-      .select('selected_date')
-      .eq('user_id', user.id);
-    
-    if(error) throw error;
-    
-    // Обновляем статистику
-    const tournamentsCount = allTournaments.filter(t => 
-      userDates?.some(d => d.selected_date === t.play_date)
-    ).length;
-    
-    userStatsDiv.innerHTML = `
-      📅 Выбрано дат: <strong>${userDates?.length || 0}</strong> | 
-      🏓 Участвую в турнирах: <strong>${tournamentsCount}</strong>
-    `;
-    
-    // Отображаем выбранные даты
-    if (userDates && userDates.length > 0) {
-      selectedDatesListDiv.innerHTML = '';
-      
-      // Сортируем даты
-      const sortedDates = userDates
-        .map(d => d.selected_date)
-        .sort((a, b) => new Date(a) - new Date(b));
-      
-      sortedDates.forEach(date => {
-        const dateDiv = document.createElement('div');
-        dateDiv.className = 'selected-date-item';
-        
-        const dateObj = new Date(date);
-        const formattedDate = dateObj.toLocaleDateString('ru-RU', {
-          weekday: 'short',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-        
-        // Проверяем, есть ли турнир на эту дату
-        const tournament = allTournaments.find(t => t.play_date === date);
-        
-        dateDiv.innerHTML = `
-          <div>
-            <strong>${formattedDate}</strong>
-            ${tournament ? `<div style="color:#facc15; font-size:12px;">🏓 ${tournament.name}</div>` : ''}
-          </div>
-          <div class="date-badge">
-            ${tournament ? 'Турнир' : 'Свободно'}
-          </div>
-        `;
-        
-        selectedDatesListDiv.appendChild(dateDiv);
-      });
-    } else {
-      selectedDatesListDiv.innerHTML = '<p style="color:#94a3b8; text-align:center;">😔 Вы еще не выбрали даты</p>';
-    }
-    
-  } catch(e) {
-    console.error('Load user dates for profile error:', e);
-  }
-}
 
 // --- Авторизация / регистрация ---
 async function auth(){
@@ -825,22 +436,12 @@ async function auth(){
     messageDiv.innerText = '👋 Вход выполнен! Добро пожаловать, ' + user.login + '!';
     messageDiv.className = 'success';
     
-    // Сохраняем сессию
-    saveSession();
-    
-    // Показываем профиль
-    showUserProfile();
-    
     buildCalendar();
-    await loadAllUsers();
-    await loadAllUserDates();
     await loadTournaments();
     await loadUserSelectedDates();
     
     if(user.login.toLowerCase() === 'admin') {
       adminPanelDiv.style.display='block';
-      userDatesSection.style.display='block';
-      renderUserDatesTable();
     }
 
   } catch(e){
@@ -848,99 +449,6 @@ async function auth(){
     messageDiv.innerText = '❌ Ошибка: ' + (e.message || 'Неизвестная ошибка');
     messageDiv.className = 'error';
   }
-}
-
-// --- Загрузка всех пользователей ---
-async function loadAllUsers(){
-  try {
-    const {data: users, error} = await supabaseClient
-      .from('pp_users')
-      .select('*')
-      .order('login', {ascending: true});
-    
-    if(error) throw error;
-    
-    allUsers = users || [];
-  } catch(e) {
-    console.error('Load users error:', e);
-  }
-}
-
-// --- Загрузка всех выбранных дат ---
-async function loadAllUserDates(){
-  try {
-    const {data: dates, error} = await supabaseClient
-      .from('pp_user_dates')
-      .select(`
-        *,
-        pp_users!inner(login)
-      `)
-      .order('selected_date', {ascending: true});
-    
-    if(error) throw error;
-    
-    allUserDates = dates || [];
-  } catch(e) {
-    console.error('Load user dates error:', e);
-  }
-}
-
-// --- Отображение таблицы выбранных дат пользователей ---
-function renderUserDatesTable(){
-  if(allUserDates.length === 0) {
-    userDatesTableContainer.innerHTML = '<p class="empty-row">😔 Пользователи еще не выбрали даты</p>';
-    return;
-  }
-  
-  // Группируем по пользователю
-  const groupedByUser = {};
-  allUserDates.forEach(date => {
-    const userId = date.user_id;
-    const userName = date.pp_users?.login || `ID: ${userId}`;
-    
-    if(!groupedByUser[userId]) {
-      groupedByUser[userId] = {
-        name: userName,
-        dates: []
-      };
-    }
-    groupedByUser[userId].dates.push(date.selected_date);
-  });
-  
-  let html = `
-    <table class="user-dates-table">
-      <thead>
-        <tr>
-          <th>👤 Пользователь</th>
-          <th>📅 Выбранные даты</th>
-          <th>🎯 Количество</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-  
-  Object.values(groupedByUser).forEach(userData => {
-    const datesSorted = userData.dates.sort((a, b) => new Date(a) - new Date(b));
-    const datesFormatted = datesSorted.map(d => new Date(d).toLocaleDateString('ru-RU')).join(', ');
-    
-    html += `
-      <tr>
-        <td><strong>${userData.name}</strong></td>
-        <td>${datesFormatted}</td>
-        <td><span style="background:#38bdf8; color:black; padding:2px 8px; border-radius:12px; font-weight:bold;">${userData.dates.length}</span></td>
-      </tr>
-    `;
-  });
-  
-  html += `
-      </tbody>
-    </table>
-    <div style="margin-top:10px; color:#94a3b8; font-size:14px;">
-      Всего записей: ${allUserDates.length}
-    </div>
-  `;
-  
-  userDatesTableContainer.innerHTML = html;
 }
 
 // --- Календарь ---
@@ -1051,12 +559,7 @@ async function loadUserSelectedDates(){
     
     if(userDates && userDates.length > 0) {
       selectedDates = userDates.map(d => d.selected_date);
-      // Обновляем отображение в профиле
-      loadUserSelectedDatesForProfile();
       // Календарь обновится при следующем buildCalendar()
-    } else {
-      selectedDates = [];
-      loadUserSelectedDatesForProfile();
     }
   } catch(e) {
     console.error('Load user dates error:', e);
@@ -1097,16 +600,9 @@ async function submitDates(){
     messageDiv.innerText = '✅ Даты сохранены! Проверяем возможность создания турниров... 🎯';
     messageDiv.className = 'success';
     
-    // Обновляем данные
-    await loadAllUserDates();
+    // Проверяем и создаем турниры автоматически
     await checkAndCreateTournaments();
     await loadTournaments();
-    await loadUserSelectedDatesForProfile();
-    
-    // Обновляем таблицу в админке если админ
-    if(user.login.toLowerCase() === 'admin') {
-      renderUserDatesTable();
-    }
     
   } catch(e){
     console.error('Submit dates error:', e);
@@ -1332,18 +828,11 @@ async function joinTournament(tournamentDate) {
       messageDiv.className = 'success';
     }
 
-    // Обновляем данные
-    await loadAllUserDates();
+    // Обновляем список турниров
     await loadTournaments();
-    await loadUserSelectedDatesForProfile();
 
     // Проверяем, нужно ли обновить название турнира
     await updateTournamentName(tournamentDate);
-
-    // Обновляем таблицу в админке если админ
-    if(user.login.toLowerCase() === 'admin') {
-      renderUserDatesTable();
-    }
 
   } catch(e) {
     console.error('Join tournament error:', e);
@@ -1453,13 +942,6 @@ function renderAdminTournamentList(tournaments){
       }
     };
     
-    const manageParticipantsBtn = document.createElement('button'); 
-    manageParticipantsBtn.innerText='👥 Управление участниками';
-    manageParticipantsBtn.style.background = '#22c55e';
-    manageParticipantsBtn.onclick = () => {
-      manageTournamentParticipants(t);
-    };
-    
     const delBtn = document.createElement('button'); 
     delBtn.innerText='🗑️ Удалить';
     delBtn.style.background = '#f87171';
@@ -1478,209 +960,39 @@ function renderAdminTournamentList(tournaments){
       }
     };
     
+    const participantsBtn = document.createElement('button'); 
+    participantsBtn.innerText='👥 Участники';
+    participantsBtn.style.background = '#22c55e';
+    participantsBtn.onclick = async () => {
+      try {
+        const {data: users, error} = await supabaseClient
+          .from('pp_user_dates')
+          .select(`
+            user_id,
+            pp_users!inner(login)
+          `)
+          .eq('selected_date', t.play_date);
+        
+        if(error) throw error;
+        
+        if(users && users.length > 0) {
+          const userList = users.map(u => `• ${u.pp_users?.login || `ID: ${u.user_id}`}`).join('\n');
+          alert(`👥 Участники турнира "${t.name}" (${t.play_date}):\n\n${userList}\n\n🎯 Всего участников: ${users.length}`);
+        } else {
+          alert(`😔 На турнир "${t.name}" пока никто не записался`);
+        }
+      } catch(e) {
+        console.error('Get participants error:', e);
+        alert('❌ Ошибка загрузки участников');
+      }
+    };
+    
     div.appendChild(span); 
     div.appendChild(editBtn); 
-    div.appendChild(manageParticipantsBtn);
+    div.appendChild(participantsBtn);
     div.appendChild(delBtn);
     tournamentAdminListDiv.appendChild(div);
   });
-}
-
-// --- Управление участниками турнира ---
-async function manageTournamentParticipants(tournament) {
-  // Получаем текущих участников турнира
-  const {data: currentParticipants, error} = await supabaseClient
-    .from('pp_user_dates')
-    .select(`
-      id,
-      user_id,
-      selected_date,
-      pp_users!inner(login)
-    `)
-    .eq('selected_date', tournament.play_date);
-  
-  if(error) {
-    alert('❌ Ошибка загрузки участников');
-    return;
-  }
-  
-  // Создаем модальное окно
-  const modal = document.createElement('div');
-  modal.className = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>👥 Управление участниками</h3>
-        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
-      </div>
-      <div style="margin-bottom: 20px;">
-        <strong style="color:#facc15">${tournament.name}</strong>
-        <div style="color:#94a3b8; font-size:14px;">📅 ${tournament.play_date}</div>
-      </div>
-      
-      <h4>🎯 Текущие участники (${currentParticipants?.length || 0})</h4>
-      <div id="currentParticipantsList" style="margin-bottom: 20px;">
-        ${currentParticipants && currentParticipants.length > 0 
-          ? currentParticipants.map(p => `
-              <div class="participant-manage-item">
-                <span>${escapeHtml(p.pp_users?.login || `ID: ${p.user_id}`)}</span>
-                <button onclick="removeParticipant(${p.id}, '${escapeSingleQuote(tournament.play_date)}', ${tournament.id})" 
-                        style="background:#f87171; padding:5px 10px; font-size:12px;">
-                  Удалить
-                </button>
-              </div>
-            `).join('')
-          : '<p style="color:#94a3b8; text-align:center;">😔 Участников пока нет</p>'
-        }
-      </div>
-      
-      <h4>➕ Добавить участника</h4>
-      <div class="add-participant-form">
-        <select id="addParticipantSelect">
-          <option value="">-- Выберите пользователя --</option>
-          ${allUsers.map(u => `
-            <option value="${u.id}">${escapeHtml(u.login)}</option>
-          `).join('')}
-        </select>
-        <button onclick="addParticipantToTournament(${tournament.id}, '${escapeSingleQuote(tournament.play_date)}')"
-                style="background:#22c55e; padding:5px 15px; margin:0;">
-          Добавить
-        </button>
-      </div>
-      
-      <div style="margin-top: 20px; padding: 10px; background: rgba(56, 189, 248, 0.1); border-radius: 8px;">
-        <div style="color:#38bdf8; font-size:14px;">
-          💡 <strong>Важно:</strong> После добавления/удаления участников обновится название турнира
-        </div>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-}
-
-// Вспомогательные функции для экранирования строк
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function escapeSingleQuote(text) {
-  return text.replace(/'/g, "\\'");
-}
-
-// --- Удаление участника из турнира ---
-async function removeParticipant(participantId, tournamentDate, tournamentId) {
-  if(!confirm('⚠️ Вы уверены, что хотите удалить этого участника из турнира?')) {
-    return;
-  }
-  
-  try {
-    // Удаляем запись из pp_user_dates
-    const {error} = await supabaseClient
-      .from('pp_user_dates')
-      .delete()
-      .eq('id', participantId);
-    
-    if(error) throw error;
-    
-    // Обновляем данные
-    await loadAllUserDates();
-    await updateTournamentName(tournamentDate);
-    await loadTournaments();
-    
-    // Обновляем таблицу в админке если админ
-    if(user && user.login.toLowerCase() === 'admin') {
-      renderUserDatesTable();
-    }
-    
-    // Закрываем модальное окно и открываем заново с обновленными данными
-    document.querySelector('.modal-overlay')?.remove();
-    
-    // Получаем обновленный турнир и открываем модалку
-    const {data: updatedTournament} = await supabaseClient
-      .from('pp_tournaments')
-      .select('*')
-      .eq('id', tournamentId)
-      .single();
-    
-    if(updatedTournament) {
-      manageTournamentParticipants(updatedTournament);
-    }
-    
-    messageDiv.innerText = '✅ Участник удален из турнира!';
-    messageDiv.className = 'success';
-    
-  } catch(e) {
-    console.error('Remove participant error:', e);
-    alert('❌ Ошибка удаления участника: ' + (e.message || 'Неизвестная ошибка'));
-  }
-}
-
-// --- Добавление участника в турнир ---
-async function addParticipantToTournament(tournamentId, tournamentDate) {
-  const userId = document.getElementById('addParticipantSelect').value;
-  
-  if(!userId) {
-    alert('⚠️ Выберите пользователя!');
-    return;
-  }
-  
-  try {
-    // Проверяем, не добавлен ли уже пользователь
-    const {data: existing} = await supabaseClient
-      .from('pp_user_dates')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('selected_date', tournamentDate);
-    
-    if(existing && existing.length > 0) {
-      alert('⚠️ Этот пользователь уже участвует в турнире!');
-      return;
-    }
-    
-    // Добавляем пользователя
-    const {error} = await supabaseClient
-      .from('pp_user_dates')
-      .insert([{
-        user_id: userId,
-        selected_date: tournamentDate
-      }]);
-    
-    if(error) throw error;
-    
-    // Обновляем данные
-    await loadAllUserDates();
-    await updateTournamentName(tournamentDate);
-    await loadTournaments();
-    
-    // Обновляем таблицу в админке если админ
-    if(user && user.login.toLowerCase() === 'admin') {
-      renderUserDatesTable();
-    }
-    
-    // Закрываем модальное окно и открываем заново с обновленными данными
-    document.querySelector('.modal-overlay')?.remove();
-    
-    // Получаем обновленный турнир и открываем модалку
-    const {data: updatedTournament} = await supabaseClient
-      .from('pp_tournaments')
-      .select('*')
-      .eq('id', tournamentId)
-      .single();
-    
-    if(updatedTournament) {
-      manageTournamentParticipants(updatedTournament);
-    }
-    
-    messageDiv.innerText = '✅ Участник добавлен в турнир!';
-    messageDiv.className = 'success';
-    
-  } catch(e) {
-    console.error('Add participant error:', e);
-    alert('❌ Ошибка добавления участника: ' + (e.message || 'Неизвестная ошибка'));
-  }
 }
 
 // Инициализация при загрузке
@@ -1691,15 +1003,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('adminTournamentDate').value = today;
   document.getElementById('adminTournamentDate').min = today;
   
-  // Проверяем сессию
-  const hasSession = checkSession();
-  
-  if (!hasSession) {
-    // Загружаем турниры для неавторизованных пользователей
-    loadTournaments();
-    loadAllUsers();
-    loadAllUserDates();
-  }
+  // Загружаем турниры сразу (без входа)
+  loadTournaments();
 });
 </script>
 </body>
