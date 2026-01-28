@@ -120,6 +120,63 @@ button:hover { transform: scale(1.05); }
   color: #94a3b8;
 }
 
+.user-profile {
+  background: rgba(56, 189, 248, 0.1);
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 2px solid #facc15;
+  display: none;
+}
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  background: #38bdf8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+.selected-dates-list {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+}
+.selected-date-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background: #334155;
+  border-radius: 6px;
+  margin-bottom: 5px;
+}
+.selected-date-item:last-child {
+  margin-bottom: 0;
+}
+.date-badge {
+  background: #22c55e;
+  color: black;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
 .calendar-controls {
   display: flex;
   justify-content: space-between;
@@ -346,12 +403,48 @@ button:hover { transform: scale(1.05); }
   color: white;
   border: 1px solid #475569;
 }
+.logout-btn {
+  background: #f87171;
+  color: black;
+  padding: 5px 15px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+.logout-btn:hover {
+  background: #ef4444;
+  transform: scale(1.05);
+}
 </style>
 </head>
 <body>
 <div class="container">
+<!-- Личный кабинет пользователя -->
+<section class="user-profile" id="userProfile">
+  <div class="profile-header">
+    <div class="profile-info">
+      <div class="profile-avatar" id="userAvatar"></div>
+      <div>
+        <h3 style="margin:0; color:#facc15;" id="userName"></h3>
+        <div style="color:#94a3b8; font-size:14px;" id="userStats"></div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">🚪 Выйти</button>
+  </div>
+  
+  <div>
+    <h4 style="color:#38bdf8; margin-bottom:10px;">📅 Мои выбранные даты</h4>
+    <div class="selected-dates-list" id="selectedDatesList">
+      <p style="color:#94a3b8; text-align:center;">😔 Вы еще не выбрали даты</p>
+    </div>
+  </div>
+</section>
+
 <!-- Обновленная шапка с описанием -->
-<section class="welcome-section">
+<section class="welcome-section" id="welcomeSection">
   <div class="welcome-title">
     <span>🏓 Турниры по настольному теннису</span>
   </div>
@@ -393,7 +486,7 @@ button:hover { transform: scale(1.05); }
 </section>
 
 <!-- Обновленная форма входа -->
-<section class="login-form">
+<section class="login-form" id="loginForm">
   <h2>🔐 Вход / Регистрация</h2>
   <div class="input-group">
     <input id="login" placeholder="👤 Логин (например: Ivanov)">
@@ -490,6 +583,13 @@ const activeTournamentsDiv = document.getElementById('activeTournaments');
 const tournamentsListDiv = document.getElementById('tournamentsList');
 const monthSelect = document.getElementById('monthSelect');
 const yearSelect = document.getElementById('yearSelect');
+const userProfileDiv = document.getElementById('userProfile');
+const loginFormDiv = document.getElementById('loginForm');
+const welcomeSectionDiv = document.getElementById('welcomeSection');
+const userNameSpan = document.getElementById('userName');
+const userAvatarDiv = document.getElementById('userAvatar');
+const userStatsDiv = document.getElementById('userStats');
+const selectedDatesListDiv = document.getElementById('selectedDatesList');
 
 let user = null;
 let selectedDates = [];
@@ -497,6 +597,162 @@ let allTournaments = [];
 let allUsers = [];
 let allUserDates = [];
 let currentDate = new Date();
+
+// --- Проверка сохраненной сессии ---
+function checkSession() {
+  const savedUser = localStorage.getItem('pingpong_user');
+  if (savedUser) {
+    try {
+      const userData = JSON.parse(savedUser);
+      // Проверяем, не истекла ли сессия (24 часа)
+      const sessionTime = localStorage.getItem('pingpong_session_time');
+      const now = new Date().getTime();
+      
+      if (sessionTime && (now - parseInt(sessionTime)) < 24 * 60 * 60 * 1000) {
+        // Сессия активна
+        user = userData;
+        showUserProfile();
+        buildCalendar();
+        loadAllUsers();
+        loadAllUserDates();
+        loadTournaments();
+        loadUserSelectedDates();
+        
+        if(user.login.toLowerCase() === 'admin') {
+          adminPanelDiv.style.display='block';
+          userDatesSection.style.display='block';
+          renderUserDatesTable();
+        }
+        
+        return true;
+      } else {
+        // Сессия истекла
+        localStorage.removeItem('pingpong_user');
+        localStorage.removeItem('pingpong_session_time');
+      }
+    } catch(e) {
+      console.error('Ошибка восстановления сессии:', e);
+    }
+  }
+  return false;
+}
+
+// --- Сохранение сессии ---
+function saveSession() {
+  if (user) {
+    localStorage.setItem('pingpong_user', JSON.stringify(user));
+    localStorage.setItem('pingpong_session_time', new Date().getTime().toString());
+  }
+}
+
+// --- Выход из системы ---
+function logout() {
+  user = null;
+  selectedDates = [];
+  localStorage.removeItem('pingpong_user');
+  localStorage.removeItem('pingpong_session_time');
+  
+  // Показываем форму входа
+  loginFormDiv.style.display = 'block';
+  welcomeSectionDiv.style.display = 'block';
+  userProfileDiv.style.display = 'none';
+  adminPanelDiv.style.display = 'none';
+  
+  // Сбрасываем форму
+  loginInput.value = '';
+  passwordInput.value = '';
+  
+  messageDiv.innerText = '👋 Вы вышли из системы';
+  messageDiv.className = 'success';
+  
+  // Обновляем календарь
+  buildCalendar();
+}
+
+// --- Показать профиль пользователя ---
+function showUserProfile() {
+  if (!user) return;
+  
+  loginFormDiv.style.display = 'none';
+  welcomeSectionDiv.style.display = 'none';
+  userProfileDiv.style.display = 'block';
+  
+  // Устанавливаем имя пользователя
+  userNameSpan.textContent = user.login;
+  
+  // Устанавливаем аватар (первая буква логина)
+  userAvatarDiv.textContent = user.login.charAt(0).toUpperCase();
+  
+  // Загружаем выбранные даты пользователя для отображения в профиле
+  loadUserSelectedDatesForProfile();
+}
+
+// --- Загрузка выбранных дат для профиля ---
+async function loadUserSelectedDatesForProfile() {
+  if (!user) return;
+  
+  try {
+    const {data: userDates, error} = await supabaseClient
+      .from('pp_user_dates')
+      .select('selected_date')
+      .eq('user_id', user.id);
+    
+    if(error) throw error;
+    
+    // Обновляем статистику
+    const tournamentsCount = allTournaments.filter(t => 
+      userDates?.some(d => d.selected_date === t.play_date)
+    ).length;
+    
+    userStatsDiv.innerHTML = `
+      📅 Выбрано дат: <strong>${userDates?.length || 0}</strong> | 
+      🏓 Участвую в турнирах: <strong>${tournamentsCount}</strong>
+    `;
+    
+    // Отображаем выбранные даты
+    if (userDates && userDates.length > 0) {
+      selectedDatesListDiv.innerHTML = '';
+      
+      // Сортируем даты
+      const sortedDates = userDates
+        .map(d => d.selected_date)
+        .sort((a, b) => new Date(a) - new Date(b));
+      
+      sortedDates.forEach(date => {
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'selected-date-item';
+        
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        // Проверяем, есть ли турнир на эту дату
+        const tournament = allTournaments.find(t => t.play_date === date);
+        
+        dateDiv.innerHTML = `
+          <div>
+            <strong>${formattedDate}</strong>
+            ${tournament ? `<div style="color:#facc15; font-size:12px;">🏓 ${tournament.name}</div>` : ''}
+          </div>
+          <div class="date-badge">
+            ${tournament ? 'Турнир' : 'Свободно'}
+          </div>
+        `;
+        
+        selectedDatesListDiv.appendChild(dateDiv);
+      });
+    } else {
+      selectedDatesListDiv.innerHTML = '<p style="color:#94a3b8; text-align:center;">😔 Вы еще не выбрали даты</p>';
+    }
+    
+  } catch(e) {
+    console.error('Load user dates for profile error:', e);
+  }
+}
 
 // --- Авторизация / регистрация ---
 async function auth(){
@@ -568,6 +824,12 @@ async function auth(){
     user = foundUser;
     messageDiv.innerText = '👋 Вход выполнен! Добро пожаловать, ' + user.login + '!';
     messageDiv.className = 'success';
+    
+    // Сохраняем сессию
+    saveSession();
+    
+    // Показываем профиль
+    showUserProfile();
     
     buildCalendar();
     await loadAllUsers();
@@ -789,7 +1051,12 @@ async function loadUserSelectedDates(){
     
     if(userDates && userDates.length > 0) {
       selectedDates = userDates.map(d => d.selected_date);
+      // Обновляем отображение в профиле
+      loadUserSelectedDatesForProfile();
       // Календарь обновится при следующем buildCalendar()
+    } else {
+      selectedDates = [];
+      loadUserSelectedDatesForProfile();
     }
   } catch(e) {
     console.error('Load user dates error:', e);
@@ -834,6 +1101,7 @@ async function submitDates(){
     await loadAllUserDates();
     await checkAndCreateTournaments();
     await loadTournaments();
+    await loadUserSelectedDatesForProfile();
     
     // Обновляем таблицу в админке если админ
     if(user.login.toLowerCase() === 'admin') {
@@ -1067,6 +1335,7 @@ async function joinTournament(tournamentDate) {
     // Обновляем данные
     await loadAllUserDates();
     await loadTournaments();
+    await loadUserSelectedDatesForProfile();
 
     // Проверяем, нужно ли обновить название турнира
     await updateTournamentName(tournamentDate);
@@ -1254,8 +1523,8 @@ async function manageTournamentParticipants(tournament) {
         ${currentParticipants && currentParticipants.length > 0 
           ? currentParticipants.map(p => `
               <div class="participant-manage-item">
-                <span>${p.pp_users?.login || `ID: ${p.user_id}`}</span>
-                <button onclick="removeParticipant(${p.id}, '${tournament.play_date}', ${tournament.id})" 
+                <span>${escapeHtml(p.pp_users?.login || `ID: ${p.user_id}`)}</span>
+                <button onclick="removeParticipant(${p.id}, '${escapeSingleQuote(tournament.play_date)}', ${tournament.id})" 
                         style="background:#f87171; padding:5px 10px; font-size:12px;">
                   Удалить
                 </button>
@@ -1270,10 +1539,10 @@ async function manageTournamentParticipants(tournament) {
         <select id="addParticipantSelect">
           <option value="">-- Выберите пользователя --</option>
           ${allUsers.map(u => `
-            <option value="${u.id}">${u.login}</option>
+            <option value="${u.id}">${escapeHtml(u.login)}</option>
           `).join('')}
         </select>
-        <button onclick="addParticipantToTournament(${tournament.id}, '${tournament.play_date}')"
+        <button onclick="addParticipantToTournament(${tournament.id}, '${escapeSingleQuote(tournament.play_date)}')"
                 style="background:#22c55e; padding:5px 15px; margin:0;">
           Добавить
         </button>
@@ -1288,6 +1557,17 @@ async function manageTournamentParticipants(tournament) {
   `;
   
   document.body.appendChild(modal);
+}
+
+// Вспомогательные функции для экранирования строк
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function escapeSingleQuote(text) {
+  return text.replace(/'/g, "\\'");
 }
 
 // --- Удаление участника из турнира ---
@@ -1411,10 +1691,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('adminTournamentDate').value = today;
   document.getElementById('adminTournamentDate').min = today;
   
-  // Загружаем турниры сразу (без входа)
-  loadTournaments();
-  loadAllUsers();
-  loadAllUserDates();
+  // Проверяем сессию
+  const hasSession = checkSession();
+  
+  if (!hasSession) {
+    // Загружаем турниры для неавторизованных пользователей
+    loadTournaments();
+    loadAllUsers();
+    loadAllUserDates();
+  }
 });
 </script>
 </body>
