@@ -457,7 +457,31 @@ button:hover { transform: scale(1.05); }
   </div>
 </div>
 
-<!-- Обновленная шапка с описанием -->
+<!-- ФОРМА ВХОДА И РЕГИСТРАЦИИ (ПЕРВЫЙ БЛОК) -->
+<section id="loginSection" class="login-form">
+  <h2>🔐 Вход / Регистрация</h2>
+  <div class="input-group">
+    <input id="login" placeholder="👤 Логин (например: Ivanov)">
+    <input id="password" type="password" placeholder="🔒 Пароль">
+  </div>
+  <button onclick="auth()">🚀 Войти или Зарегистрироваться</button>
+  <div id="message"></div>
+</section>
+
+<!-- ТУРНИРЫ, КОТОРЫМ НУЖНЫ ИГРОКИ (ВТОРОЙ БЛОК) -->
+<div id="needPlayersSection" class="need-players-section">
+  <div class="need-players-title">
+    <span>🎯 Турниры, которым нужны игроки</span>
+  </div>
+  <div id="needPlayersGrid" class="need-players-grid">
+    <!-- Турниры будут загружены здесь -->
+  </div>
+  <div id="noTournamentsMessage" class="no-tournaments-message" style="display:none;">
+    🏓 Пока нет турниров, которым нужны игроки. Станьте первым, выберите даты в календаре ниже!
+  </div>
+</div>
+
+<!-- ШАПКА С ИНФОРМАЦИЕЙ И СОВЕТАМИ (ТРЕТИЙ БЛОК) -->
 <section class="welcome-section">
   <div class="welcome-title">
     <span>🏓 Турниры по настольному теннису</span>
@@ -491,30 +515,6 @@ button:hover { transform: scale(1.05); }
     <div class="tip-text">• 📱 <strong>Вы всегда можете отредактировать</strong> выбранные даты в своем личном кабинете вверху страницы</div>
     <div class="tip-text">• 🎯 <strong>Система запоминает вас</strong> — после входа вы остаетесь в аккаунте даже после обновления страницы!</div>
   </div>
-</section>
-
-<!-- НОВАЯ СЕКЦИЯ: Турниры, которым нужны игроки -->
-<div id="needPlayersSection" class="need-players-section">
-  <div class="need-players-title">
-    <span>🎯 Турниры, которым нужны игроки</span>
-  </div>
-  <div id="needPlayersGrid" class="need-players-grid">
-    <!-- Турниры будут загружены здесь -->
-  </div>
-  <div id="noTournamentsMessage" class="no-tournaments-message" style="display:none;">
-    🏓 Пока нет турниров, которым нужны игроки. Станьте первым, выберите даты в календаре ниже!
-  </div>
-</div>
-
-<!-- Форма входа (будет скрыта после входа) -->
-<section id="loginSection" class="login-form">
-  <h2>🔐 Вход / Регистрация</h2>
-  <div class="input-group">
-    <input id="login" placeholder="👤 Логин (например: Ivanov)">
-    <input id="password" type="password" placeholder="🔒 Пароль">
-  </div>
-  <button onclick="auth()">🚀 Войти или Зарегистрироваться</button>
-  <div id="message"></div>
 </section>
 
 <!-- Календарь и выбор дат (показывается всегда) -->
