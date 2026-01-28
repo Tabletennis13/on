@@ -176,38 +176,6 @@ button:hover { transform: scale(1.05); }
   font-size: 12px;
   font-weight: bold;
 }
-.delete-date-btn {
-  background: #f87171;
-  color: black;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  cursor: pointer;
-  border: none;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  margin-left: 5px;
-}
-.delete-date-btn:hover {
-  background: #ef4444;
-  transform: scale(1.05);
-}
-.leave-tournament-btn {
-  background: #f59e0b;
-  color: black;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  cursor: pointer;
-  border: none;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  margin-left: 5px;
-}
-.leave-tournament-btn:hover {
-  background: #d97706;
-  transform: scale(1.05);
-}
 
 .calendar-controls {
   display: flex;
@@ -309,22 +277,6 @@ button:hover { transform: scale(1.05); }
   background: #16a34a;
   transform: scale(1.05);
 }
-.leave-tournament-action-btn {
-  background: #f59e0b;
-  color: black;
-  padding: 8px 15px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  border: none;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  margin-top: 5px;
-}
-.leave-tournament-action-btn:hover {
-  background: #d97706;
-  transform: scale(1.05);
-}
 
 .tournament-action {
   margin-top: 10px;
@@ -332,13 +284,6 @@ button:hover { transform: scale(1.05); }
   background: rgba(34, 197, 94, 0.1);
   border-radius: 8px;
   border: 1px solid #22c55e;
-}
-.tournament-leave-action {
-  margin-top: 10px;
-  padding: 10px;
-  background: rgba(245, 158, 11, 0.1);
-  border-radius: 8px;
-  border: 1px solid #f59e0b;
 }
 
 /* Стили для админских таблиц */
@@ -659,22 +604,32 @@ function checkSession() {
   if (savedUser) {
     try {
       const userData = JSON.parse(savedUser);
-      // ВЕЧНАЯ СЕССИЯ - не проверяем время
-      user = userData;
-      showUserProfile();
-      buildCalendar();
-      loadAllUsers();
-      loadAllUserDates();
-      loadTournaments();
-      loadUserSelectedDates();
+      // Проверяем, не истекла ли сессия (24 часа)
+      const sessionTime = localStorage.getItem('pingpong_session_time');
+      const now = new Date().getTime();
       
-      if(user.login.toLowerCase() === 'admin') {
-        adminPanelDiv.style.display='block';
-        userDatesSection.style.display='block';
-        renderUserDatesTable();
+      if (sessionTime && (now - parseInt(sessionTime)) < 24 * 60 * 60 * 1000) {
+        // Сессия активна
+        user = userData;
+        showUserProfile();
+        buildCalendar();
+        loadAllUsers();
+        loadAllUserDates();
+        loadTournaments();
+        loadUserSelectedDates();
+        
+        if(user.login.toLowerCase() === 'admin') {
+          adminPanelDiv.style.display='block';
+          userDatesSection.style.display='block';
+          renderUserDatesTable();
+        }
+        
+        return true;
+      } else {
+        // Сессия истекла
+        localStorage.removeItem('pingpong_user');
+        localStorage.removeItem('pingpong_session_time');
       }
-      
-      return true;
     } catch(e) {
       console.error('Ошибка восстановления сессии:', e);
     }
@@ -686,26 +641,22 @@ function checkSession() {
 function saveSession() {
   if (user) {
     localStorage.setItem('pingpong_user', JSON.stringify(user));
-    // Не сохраняем время - сессия вечная
+    localStorage.setItem('pingpong_session_time', new Date().getTime().toString());
   }
 }
 
 // --- Выход из системы ---
 function logout() {
-  if (!confirm('🚪 Вы уверены, что хотите выйти?')) {
-    return;
-  }
-  
   user = null;
   selectedDates = [];
   localStorage.removeItem('pingpong_user');
+  localStorage.removeItem('pingpong_session_time');
   
   // Показываем форму входа
   loginFormDiv.style.display = 'block';
   welcomeSectionDiv.style.display = 'block';
   userProfileDiv.style.display = 'none';
   adminPanelDiv.style.display = 'none';
-  activeTournamentsDiv.style.display = 'none';
   
   // Сбрасываем форму
   loginInput.value = '';
@@ -743,7 +694,7 @@ async function loadUserSelectedDatesForProfile() {
   try {
     const {data: userDates, error} = await supabaseClient
       .from('pp_user_dates')
-      .select('id, selected_date')
+      .select('selected_date')
       .eq('user_id', user.id);
     
     if(error) throw error;
@@ -764,14 +715,14 @@ async function loadUserSelectedDatesForProfile() {
       
       // Сортируем даты
       const sortedDates = userDates
-        .map(d => ({id: d.id, date: d.selected_date}))
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+        .map(d => d.selected_date)
+        .sort((a, b) => new Date(a) - new Date(b));
       
-      sortedDates.forEach(dateItem => {
+      sortedDates.forEach(date => {
         const dateDiv = document.createElement('div');
         dateDiv.className = 'selected-date-item';
         
-        const dateObj = new Date(dateItem.date);
+        const dateObj = new Date(date);
         const formattedDate = dateObj.toLocaleDateString('ru-RU', {
           weekday: 'short',
           year: 'numeric',
@@ -780,25 +731,15 @@ async function loadUserSelectedDatesForProfile() {
         });
         
         // Проверяем, есть ли турнир на эту дату
-        const tournament = allTournaments.find(t => t.play_date === dateItem.date);
+        const tournament = allTournaments.find(t => t.play_date === date);
         
         dateDiv.innerHTML = `
           <div>
             <strong>${formattedDate}</strong>
             ${tournament ? `<div style="color:#facc15; font-size:12px;">🏓 ${tournament.name}</div>` : ''}
           </div>
-          <div>
-            <span class="date-badge">
-              ${tournament ? 'Турнир' : 'Свободно'}
-            </span>
-            <button class="delete-date-btn" onclick="removeSelectedDate('${escapeSingleQuote(dateItem.date)}', ${dateItem.id})" title="Удалить дату">
-              ❌
-            </button>
-            ${tournament ? `
-              <button class="leave-tournament-btn" onclick="leaveTournament('${escapeSingleQuote(dateItem.date)}')" title="Выйти из турнира">
-                🚪
-              </button>
-            ` : ''}
+          <div class="date-badge">
+            ${tournament ? 'Турнир' : 'Свободно'}
           </div>
         `;
         
@@ -810,146 +751,6 @@ async function loadUserSelectedDatesForProfile() {
     
   } catch(e) {
     console.error('Load user dates for profile error:', e);
-  }
-}
-
-// --- Удаление выбранной даты ---
-async function removeSelectedDate(date, dateId = null) {
-  if (!user) return;
-  
-  if (!confirm('🗑️ Вы уверены, что хотите удалить эту дату?')) {
-    return;
-  }
-  
-  try {
-    // Если передан ID записи, удаляем по ID, иначе по дате и пользователю
-    if (dateId) {
-      const {error} = await supabaseClient
-        .from('pp_user_dates')
-        .delete()
-        .eq('id', dateId);
-      
-      if(error) throw error;
-    } else {
-      const {error} = await supabaseClient
-        .from('pp_user_dates')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('selected_date', date);
-      
-      if(error) throw error;
-    }
-    
-    // Удаляем из локального массива
-    selectedDates = selectedDates.filter(d => d !== date);
-    
-    // Обновляем данные
-    await loadAllUserDates();
-    await loadTournaments();
-    await loadUserSelectedDatesForProfile();
-    
-    // Обновляем календарь
-    buildCalendar();
-    
-    // Проверяем, нужно ли обновить название турнира (если был турнир)
-    const tournament = allTournaments.find(t => t.play_date === date);
-    if (tournament) {
-      await updateTournamentName(date);
-      // Проверяем, нужно ли удалить турнир (если участников меньше 3)
-      await checkAndDeleteTournament(date);
-    }
-    
-    // Обновляем таблицу в админке если админ
-    if(user.login.toLowerCase() === 'admin') {
-      renderUserDatesTable();
-    }
-    
-    messageDiv.innerText = '✅ Дата удалена!';
-    messageDiv.className = 'success';
-    
-  } catch(e) {
-    console.error('Remove date error:', e);
-    alert('❌ Ошибка удаления даты: ' + (e.message || 'Неизвестная ошибка'));
-  }
-}
-
-// --- Выход из турнира ---
-async function leaveTournament(date) {
-  if (!user) return;
-  
-  if (!confirm('🚪 Вы уверены, что хотите выйти из турнира?')) {
-    return;
-  }
-  
-  try {
-    // Удаляем запись о выбранной дате
-    const {error} = await supabaseClient
-      .from('pp_user_dates')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('selected_date', date);
-    
-    if(error) throw error;
-    
-    // Удаляем из локального массива
-    selectedDates = selectedDates.filter(d => d !== date);
-    
-    // Обновляем данные
-    await loadAllUserDates();
-    await loadTournaments();
-    await loadUserSelectedDatesForProfile();
-    
-    // Обновляем календарь
-    buildCalendar();
-    
-    // Обновляем название турнира
-    await updateTournamentName(date);
-    
-    // Проверяем, нужно ли удалить турнир (если участников меньше 3)
-    await checkAndDeleteTournament(date);
-    
-    // Обновляем таблицу в админке если админ
-    if(user.login.toLowerCase() === 'admin') {
-      renderUserDatesTable();
-    }
-    
-    messageDiv.innerText = '✅ Вы вышли из турнира!';
-    messageDiv.className = 'success';
-    
-  } catch(e) {
-    console.error('Leave tournament error:', e);
-    alert('❌ Ошибка выхода из турнира: ' + (e.message || 'Неизвестная ошибка'));
-  }
-}
-
-// --- Проверка и удаление турнира если участников меньше 3 ---
-async function checkAndDeleteTournament(date) {
-  try {
-    // Получаем количество участников на эту дату
-    const {data: participants, error} = await supabaseClient
-      .from('pp_user_dates')
-      .select('user_id')
-      .eq('selected_date', date);
-    
-    if(error) throw error;
-    
-    // Если участников меньше 3, удаляем турнир
-    if (participants && participants.length < 3) {
-      const {error: deleteError} = await supabaseClient
-        .from('pp_tournaments')
-        .delete()
-        .eq('play_date', date);
-      
-      if(deleteError) throw deleteError;
-      
-      console.log(`🗑️ Турнир на ${date} удален (участников: ${participants.length})`);
-      
-      // Обновляем список турниров
-      await loadTournaments();
-    }
-    
-  } catch(e) {
-    console.error('Check and delete tournament error:', e);
   }
 }
 
@@ -1024,7 +825,7 @@ async function auth(){
     messageDiv.innerText = '👋 Вход выполнен! Добро пожаловать, ' + user.login + '!';
     messageDiv.className = 'success';
     
-    // Сохраняем сессию (вечную)
+    // Сохраняем сессию
     saveSession();
     
     // Показываем профиль
@@ -1473,13 +1274,10 @@ async function displayActiveTournaments(){
         </div>
       ` : ''}
       ${userParticipates ? `
-        <div class="tournament-leave-action">
+        <div class="tournament-action" style="background: rgba(34, 197, 94, 0.1);">
           <div style="color:#22c55e; font-weight:bold;">
             ✅ Вы участвуете в этом турнире!
           </div>
-          <button class="leave-tournament-action-btn" onclick="leaveTournament('${tournament.play_date}')">
-            🚪 Выйти из турнира
-          </button>
         </div>
       ` : ''}
     `;
@@ -1893,7 +1691,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('adminTournamentDate').value = today;
   document.getElementById('adminTournamentDate').min = today;
   
-  // Проверяем сессию (вечную)
+  // Проверяем сессию
   const hasSession = checkSession();
   
   if (!hasSession) {
