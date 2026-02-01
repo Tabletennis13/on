@@ -6,6 +6,7 @@
 <title>🏓 Турниры по настольному теннису</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* (Стили остаются без изменений, как в вашем коде) */
 body { margin:0; font-family:system-ui; background:#0f172a; color:white; }
 .container { max-width:700px; margin:auto; padding:15px; text-align:center; }
 h1,h2,h3 { margin-bottom:10px; }
@@ -169,6 +170,10 @@ button:hover { transform: scale(1.05); }
 .day.selected { background:#22c55e; color:black; }
 .day.tournament { background:#facc15; color:black; font-weight:bold; }
 .day.tournament::after { content: "🏓"; position:absolute; top:2px; right:2px; font-size:10px; }
+/* Изменение: дата с турниром может быть выбрана */
+.day.tournament.selected { background: linear-gradient(135deg, #22c55e 0%, #facc15 100%); }
+.day.past { opacity:0.5; cursor:not-allowed; background:#374151; }
+.day.past:hover { transform:none; background:#374151; }
 
 .success { color:#22c55e; font-weight:bold; margin-top:10px; padding: 10px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid #22c55e; }
 .error { color:#f87171; font-weight:bold; margin-top:10px; padding: 10px; background: rgba(248, 113, 113, 0.1); border-radius: 8px; border: 1px solid #f87171; }
@@ -558,6 +563,14 @@ button:hover { transform: scale(1.05); }
       <div class="legend-color" style="background:#475569;"></div>
       <span>Доступный день</span>
     </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:linear-gradient(135deg, #22c55e 0%, #facc15 100%);"></div>
+      <span>Дата турнира, которую вы выбрали</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background:#374151;"></div>
+      <span>Прошедшая дата</span>
+    </div>
   </div>
 
   <div id="activeTournaments" class="tournament-info">
@@ -614,8 +627,38 @@ let allTournaments = [];
 let allTournamentsWithParticipants = [];
 let currentDate = new Date();
 
+// --- Функция очистки прошедших турниров ---
+async function cleanupPastTournaments() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Удаляем турниры с прошедшими датами
+    const {error: deleteTournamentsError} = await supabaseClient
+      .from('pp_tournaments')
+      .delete()
+      .lt('play_date', today);
+    
+    if (deleteTournamentsError) throw deleteTournamentsError;
+    
+    // Также удаляем записи пользователей на прошедшие даты
+    const {error: deleteUserDatesError} = await supabaseClient
+      .from('pp_user_dates')
+      .delete()
+      .lt('selected_date', today);
+    
+    if (deleteUserDatesError) throw deleteUserDatesError;
+    
+    console.log('✅ Очистка прошедших турниров и записей выполнена');
+  } catch (e) {
+    console.error('Ошибка очистки прошедших турниров:', e);
+  }
+}
+
 // --- Проверка сохраненной сессии при загрузке ---
 async function checkSavedSession() {
+  // Очищаем прошедшие турниры при загрузке
+  await cleanupPastTournaments();
+  
   const savedUser = localStorage.getItem('tt_user');
   const savedPassword = localStorage.getItem('tt_password');
   
@@ -1005,6 +1048,7 @@ function buildCalendar(){
   }
 
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split('T')[0];
   
   for(let d = 1; d <= daysInMonth; d++){
@@ -1013,6 +1057,16 @@ function buildCalendar(){
     day.innerText = d;
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     day.dataset.date = dateStr;
+    
+    // Проверяем, является ли дата прошедшей
+    const dateObj = new Date(dateStr);
+    dateObj.setHours(0, 0, 0, 0);
+    const isPastDate = dateObj < today;
+    
+    if (isPastDate) {
+      day.classList.add('past');
+      day.style.cursor = 'not-allowed';
+    }
     
     if (dateStr === todayStr) {
       day.style.border = '2px solid #38bdf8';
@@ -1030,12 +1084,24 @@ function buildCalendar(){
       day.title = tournament.name;
     }
     
+    // ИЗМЕНЕНИЕ: разрешаем выбирать дату даже если на ней есть турнир
     day.onclick = () => {
+      if (isPastDate) {
+        messageDiv.innerText = '⚠️ Нельзя выбрать прошедшую дату';
+        messageDiv.className = 'error';
+        return;
+      }
+      
       const isSelected = selectedDates.includes(dateStr);
       
       if(isSelected){
         selectedDates = selectedDates.filter(x => x !== dateStr);
         day.classList.remove('selected');
+        day.classList.remove('tournament');
+        // Возвращаем класс турнира, если он был
+        if(tournament) {
+          day.classList.add('tournament');
+        }
       } else {
         selectedDates.push(dateStr);
         day.classList.add('selected');
@@ -1642,6 +1708,9 @@ function renderAdminTournamentList(tournaments){
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', async () => {
+  // Очищаем прошедшие турниры при загрузке
+  await cleanupPastTournaments();
+  
   buildCalendar();
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('adminTournamentDate').value = today;
